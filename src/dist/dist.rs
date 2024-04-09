@@ -817,20 +817,7 @@ fn update_from_dist_(prefix: &InstallPrefix, opts: &DistOptions<'_>) -> Result<O
     };
 
     loop {
-        match try_update_from_dist_(
-            opts.dl_cfg,
-            opts.update_hash,
-            &toolchain,
-            match opts.exists {
-                true => None,
-                false => Some(opts.profile),
-            },
-            prefix,
-            opts.force,
-            opts.components,
-            opts.targets,
-            &mut fetched,
-        ) {
+        match try_update_from_dist_(prefix, &opts, &mut fetched) {
             Ok(v) => break Ok(v),
             Err(e) => {
                 if !backtrack {
@@ -903,52 +890,51 @@ fn update_from_dist_(prefix: &InstallPrefix, opts: &DistOptions<'_>) -> Result<O
 }
 
 fn try_update_from_dist_(
-    download: DownloadCfg<'_>,
-    update_hash: Option<&Path>,
-    toolchain: &ToolchainDesc,
-    profile: Option<Profile>,
     prefix: &InstallPrefix,
-    force_update: bool,
-    components: &[&str],
-    targets: &[&str],
+    opts: &DistOptions<'_>,
     fetched: &mut String,
 ) -> Result<Option<String>> {
-    let toolchain_str = toolchain.to_string();
-    let manifestation = Manifestation::open(prefix.clone(), toolchain.target.clone())?;
+    let toolchain_str = opts.desc.to_string();
+    let manifestation = Manifestation::open(prefix.clone(), opts.desc.target.clone())?;
 
     // TODO: Add a notification about which manifest version is going to be used
-    (download.notify_handler)(Notification::DownloadingManifest(&toolchain_str));
+    (opts.dl_cfg.notify_handler)(Notification::DownloadingManifest(&toolchain_str));
     match dl_v2_manifest(
-        download,
+        opts.dl_cfg,
         // Even if manifest has not changed, we must continue to install requested components.
         // So if components or targets is not empty, we skip passing `update_hash` so that
         // we essentially degenerate to `rustup component add` / `rustup target add`
-        if components.is_empty() && targets.is_empty() {
-            update_hash
+        if opts.components.is_empty() && opts.targets.is_empty() {
+            opts.update_hash
         } else {
             None
         },
-        toolchain,
+        opts.desc,
     ) {
         Ok(Some((m, hash))) => {
-            (download.notify_handler)(Notification::DownloadedManifest(
+            (opts.dl_cfg.notify_handler)(Notification::DownloadedManifest(
                 &m.date,
                 m.get_rust_version().ok(),
             ));
 
+            let profile = match opts.exists {
+                true => None,
+                false => Some(opts.profile),
+            };
+
             let profile_components = match profile {
-                Some(profile) => m.get_profile_components(profile, &toolchain.target)?,
+                Some(profile) => m.get_profile_components(profile, &opts.desc.target)?,
                 None => Vec::new(),
             };
 
             let mut all_components: HashSet<Component> = profile_components.into_iter().collect();
 
             let rust_package = m.get_package("rust")?;
-            let rust_target_package = rust_package.get_target(Some(&toolchain.target.clone()))?;
+            let rust_target_package = rust_package.get_target(Some(&opts.desc.target.clone()))?;
 
-            for component in components {
+            for component in opts.components {
                 let mut component =
-                    Component::new(component.to_string(), Some(toolchain.target.clone()), false);
+                    Component::new(component.to_string(), Some(opts.desc.target.clone()), false);
                 if let Some(renamed) = m.rename_component(&component) {
                     component = renamed;
                 }
@@ -967,7 +953,7 @@ fn try_update_from_dist_(
                 all_components.insert(component);
             }
 
-            for target in targets {
+            for target in opts.targets {
                 let triple = TargetTriple::new(target);
                 all_components.insert(Component::new("rust-std".to_string(), Some(triple), false));
             }
@@ -985,9 +971,9 @@ fn try_update_from_dist_(
             return match manifestation.update(
                 &m,
                 changes,
-                force_update,
-                &download,
-                &toolchain.manifest_name(),
+                opts.force,
+                &opts.dl_cfg,
+                &opts.desc.manifest_name(),
                 true,
             ) {
                 Ok(status) => match status {
@@ -1024,7 +1010,7 @@ fn try_update_from_dist_(
                 Cases::CF => return Ok(None),
                 Cases::DNE => {
                     // Proceed to try v1 as a fallback
-                    (download.notify_handler)(Notification::DownloadingLegacyManifest);
+                    (opts.dl_cfg.notify_handler)(Notification::DownloadingLegacyManifest);
                 }
                 Cases::Other => return Err(any),
             }
@@ -1032,7 +1018,7 @@ fn try_update_from_dist_(
     }
 
     // If the v2 manifest is not found then try v1
-    let manifest = match dl_v1_manifest(download, toolchain) {
+    let manifest = match dl_v1_manifest(opts.dl_cfg, opts.desc) {
         Ok(m) => m,
         Err(any) => {
             enum Cases {
@@ -1048,7 +1034,7 @@ fn try_update_from_dist_(
             match case {
                 Cases::DNE => {
                     bail!(DistError::MissingReleaseForToolchain(
-                        toolchain.manifest_name()
+                        opts.desc.manifest_name()
                     ));
                 }
                 Cases::CF => return Err(any),
@@ -1056,7 +1042,7 @@ fn try_update_from_dist_(
                     return Err(any).with_context(|| {
                         format!(
                             "failed to download manifest for '{}'",
-                            toolchain.manifest_name()
+                            opts.desc.manifest_name()
                         )
                     });
                 }
@@ -1065,9 +1051,9 @@ fn try_update_from_dist_(
     };
     let result = manifestation.update_v1(
         &manifest,
-        update_hash,
-        download.tmp_cx,
-        &download.notify_handler,
+        opts.update_hash,
+        opts.dl_cfg.tmp_cx,
+        &opts.dl_cfg.notify_handler,
     );
     // inspect, determine what context to add, then process afterwards.
     let mut download_not_exists = false;
