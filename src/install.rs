@@ -137,7 +137,9 @@ impl<'a> InstallMethod<'a> {
         match self {
             InstallMethod::Copy { dest, .. } => (*dest).into(),
             InstallMethod::Link { dest, .. } => (*dest).into(),
-            InstallMethod::Dist(DistOptions { desc, .. }) => (*desc).into(),
+            InstallMethod::Dist(DistOptions {
+                toolchain: desc, ..
+            }) => (*desc).into(),
         }
     }
 
@@ -149,8 +151,8 @@ impl<'a> InstallMethod<'a> {
         match self {
             InstallMethod::Copy { cfg, dest, .. } => cfg.toolchain_path(&(*dest).into()),
             InstallMethod::Link { cfg, dest, .. } => cfg.toolchain_path(&(*dest).into()),
-            InstallMethod::Dist(DistOptions { cfg, desc, .. }) => {
-                cfg.toolchain_path(&(*desc).into())
+            InstallMethod::Dist(DistOptions { cfg, toolchain, .. }) => {
+                cfg.toolchain_path(&(*toolchain).into())
             }
         }
     }

@@ -723,7 +723,7 @@ pub(crate) fn valid_profile_names() -> String {
 #[derive(Clone)]
 pub(crate) struct DistOptions<'a> {
     pub(crate) cfg: &'a Cfg,
-    pub(crate) desc: &'a ToolchainDesc,
+    pub(crate) toolchain: &'a ToolchainDesc,
     pub(crate) profile: Profile,
     pub(crate) update_hash: Option<&'a Path>,
     pub(crate) dl_cfg: DownloadCfg<'a>,
@@ -771,7 +771,7 @@ pub(crate) fn update_from_dist(
 }
 
 fn update_backtrack(prefix: &InstallPrefix, opts: &DistOptions<'_>) -> Result<Option<String>> {
-    let mut toolchain = opts.desc.clone();
+    let mut toolchain = opts.toolchain.clone();
     let mut fetched = String::new();
     let mut first_err = None;
     let backtrack = toolchain.channel == "nightly" && toolchain.date.is_none();
@@ -892,8 +892,8 @@ fn try_dist_update(
     opts: &DistOptions<'_>,
     fetched: &mut String,
 ) -> Result<Option<String>> {
-    let toolchain_str = opts.desc.to_string();
-    let manifestation = Manifestation::open(prefix.clone(), opts.desc.target.clone())?;
+    let toolchain_str = opts.toolchain.to_string();
+    let manifestation = Manifestation::open(prefix.clone(), opts.toolchain.target.clone())?;
 
     // TODO: Add a notification about which manifest version is going to be used
     (opts.dl_cfg.notify_handler)(Notification::DownloadingManifest(&toolchain_str));
@@ -907,7 +907,7 @@ fn try_dist_update(
         } else {
             None
         },
-        opts.desc,
+        opts.toolchain,
     ) {
         Ok(Some((m, hash))) => {
             (opts.dl_cfg.notify_handler)(Notification::DownloadedManifest(
@@ -921,18 +921,22 @@ fn try_dist_update(
             };
 
             let profile_components = match profile {
-                Some(profile) => m.get_profile_components(profile, &opts.desc.target)?,
+                Some(profile) => m.get_profile_components(profile, &opts.toolchain.target)?,
                 None => Vec::new(),
             };
 
             let mut all_components: HashSet<Component> = profile_components.into_iter().collect();
 
             let rust_package = m.get_package("rust")?;
-            let rust_target_package = rust_package.get_target(Some(&opts.desc.target.clone()))?;
+            let rust_target_package =
+                rust_package.get_target(Some(&opts.toolchain.target.clone()))?;
 
             for component in opts.components {
-                let mut component =
-                    Component::new(component.to_string(), Some(opts.desc.target.clone()), false);
+                let mut component = Component::new(
+                    component.to_string(),
+                    Some(opts.toolchain.target.clone()),
+                    false,
+                );
                 if let Some(renamed) = m.rename_component(&component) {
                     component = renamed;
                 }
@@ -971,7 +975,7 @@ fn try_dist_update(
                 changes,
                 opts.force,
                 &opts.dl_cfg,
-                &opts.desc.manifest_name(),
+                &opts.toolchain.manifest_name(),
                 true,
             ) {
                 Ok(status) => match status {
@@ -1006,18 +1010,18 @@ fn try_dist_update(
     }
 
     // If the v2 manifest is not found then try v1
-    let manifest = match dl_v1_manifest(opts.dl_cfg, opts.desc) {
+    let manifest = match dl_v1_manifest(opts.dl_cfg, opts.toolchain) {
         Ok(m) => m,
         Err(err) => match err.downcast_ref::<RustupError>() {
             Some(RustupError::ChecksumFailed { .. }) => return Err(err),
             Some(RustupError::DownloadNotExists { .. }) => bail!(
-                DistError::MissingReleaseForToolchain(opts.desc.manifest_name())
+                DistError::MissingReleaseForToolchain(opts.toolchain.manifest_name())
             ),
             _ => {
                 return Err(err).with_context(|| {
                     format!(
                         "failed to download manifest for '{}'",
-                        opts.desc.manifest_name()
+                        opts.toolchain.manifest_name()
                     )
                 })
             }

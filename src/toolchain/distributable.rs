@@ -321,18 +321,18 @@ impl<'a> DistributableToolchain<'a> {
     #[cfg_attr(feature = "otel", tracing::instrument(err, skip_all))]
     pub(crate) fn install(
         cfg: &'a Cfg,
-        desc: &'_ ToolchainDesc,
+        toolchain: &'_ ToolchainDesc,
         components: &[&str],
         targets: &[&str],
         profile: Profile,
         force: bool,
     ) -> anyhow::Result<(UpdateStatus, DistributableToolchain<'a>)> {
-        let hash_path = cfg.get_hash_file(desc, true)?;
+        let hash_path = cfg.get_hash_file(toolchain, true)?;
         let update_hash = Some(&hash_path as &Path);
 
         let status = InstallMethod::Dist(DistOptions {
             cfg,
-            desc,
+            toolchain,
             profile,
             update_hash,
             dl_cfg: cfg.download_cfg(&|n| (cfg.notify_handler)(n.into())),
@@ -344,7 +344,7 @@ impl<'a> DistributableToolchain<'a> {
             targets,
         })
         .install()?;
-        Ok((status, Self::new(cfg, desc.clone())?))
+        Ok((status, Self::new(cfg, toolchain.clone())?))
     }
 
     #[cfg_attr(feature = "otel", tracing::instrument(err, skip_all))]
@@ -401,7 +401,7 @@ impl<'a> DistributableToolchain<'a> {
 
         InstallMethod::Dist(DistOptions {
             cfg: self.cfg,
-            desc: &self.desc,
+            toolchain: &self.desc,
             profile,
             update_hash,
             dl_cfg: self
