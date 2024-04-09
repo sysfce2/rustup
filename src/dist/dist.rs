@@ -1023,29 +1023,24 @@ fn try_dist_update(
             }
         },
     };
-    let result = manifestation.update_v1(
+
+    let mut result = manifestation.update_v1(
         &manifest,
         opts.update_hash,
         opts.dl_cfg.tmp_cx,
         &opts.dl_cfg.notify_handler,
     );
+
     // inspect, determine what context to add, then process afterwards.
-    let mut download_not_exists = false;
-    match &result {
-        Ok(_) => (),
-        Err(e) => {
-            if let Some(RustupError::DownloadNotExists { .. }) = e.downcast_ref::<RustupError>() {
-                download_not_exists = true
-            }
+    if let Err(e) = &result {
+        if let Some(RustupError::DownloadNotExists { .. }) = e.downcast_ref::<RustupError>() {
+            result = result.with_context(|| {
+                format!("could not download nonexistent rust version `{toolchain_str}`")
+            });
         }
     }
-    if download_not_exists {
-        result.with_context(|| {
-            format!("could not download nonexistent rust version `{toolchain_str}`")
-        })
-    } else {
-        result
-    }
+
+    result
 }
 
 pub(crate) fn dl_v2_manifest(
