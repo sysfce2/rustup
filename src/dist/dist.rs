@@ -761,7 +761,7 @@ pub(crate) fn update_from_dist(
     }
 
     // Don't leave behind an empty / broken installation directory
-    let res = update_from_dist_(prefix, opts);
+    let res = update_backtrack(prefix, opts);
     if res.is_err() && fresh_install {
         // FIXME Ignoring cascading errors
         let _ = utils::remove_dir("toolchain", prefix.path(), opts.dl_cfg.notify_handler);
@@ -770,7 +770,7 @@ pub(crate) fn update_from_dist(
     res
 }
 
-fn update_from_dist_(prefix: &InstallPrefix, opts: &DistOptions<'_>) -> Result<Option<String>> {
+fn update_backtrack(prefix: &InstallPrefix, opts: &DistOptions<'_>) -> Result<Option<String>> {
     let mut toolchain = opts.desc.clone();
     let mut fetched = String::new();
     let mut first_err = None;
@@ -817,7 +817,7 @@ fn update_from_dist_(prefix: &InstallPrefix, opts: &DistOptions<'_>) -> Result<O
     };
 
     loop {
-        let e = match try_update_from_dist_(prefix, &opts, &mut fetched) {
+        let e = match try_dist_update(prefix, opts, &mut fetched) {
             Ok(v) => break Ok(v),
             Err(e) => e,
         };
@@ -887,7 +887,7 @@ fn update_from_dist_(prefix: &InstallPrefix, opts: &DistOptions<'_>) -> Result<O
     }
 }
 
-fn try_update_from_dist_(
+fn try_dist_update(
     prefix: &InstallPrefix,
     opts: &DistOptions<'_>,
     fetched: &mut String,
