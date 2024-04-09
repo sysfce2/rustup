@@ -9,7 +9,7 @@ use crate::{
     config::Cfg,
     dist::{
         config::Config,
-        dist::{Profile, ToolchainDesc},
+        dist::{DistOptions, Profile, ToolchainDesc},
         manifest::{Component, ComponentStatus, Manifest},
         manifestation::{Changes, Manifestation},
         prefix::InstallPrefix,
@@ -330,7 +330,7 @@ impl<'a> DistributableToolchain<'a> {
         let hash_path = cfg.get_hash_file(desc, true)?;
         let update_hash = Some(&hash_path as &Path);
 
-        let status = InstallMethod::Dist {
+        let status = InstallMethod::Dist(DistOptions {
             cfg,
             desc,
             profile,
@@ -342,7 +342,7 @@ impl<'a> DistributableToolchain<'a> {
             old_date_version: None,
             components,
             targets,
-        }
+        })
         .install()?;
         Ok((status, Self::new(cfg, desc.clone())?))
     }
@@ -399,7 +399,7 @@ impl<'a> DistributableToolchain<'a> {
         let hash_path = self.cfg.get_hash_file(&self.desc, true)?;
         let update_hash = Some(&hash_path as &Path);
 
-        InstallMethod::Dist {
+        InstallMethod::Dist(DistOptions {
             cfg: self.cfg,
             desc: &self.desc,
             profile,
@@ -413,7 +413,7 @@ impl<'a> DistributableToolchain<'a> {
             old_date_version,
             components,
             targets,
-        }
+        })
         .install()
     }
 
