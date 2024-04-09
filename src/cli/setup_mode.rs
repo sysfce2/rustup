@@ -6,7 +6,7 @@ use crate::{
         common,
         self_update::{self, InstallOpts},
     },
-    currentprocess::{argsource::ArgSource, filesource::StdoutSource},
+    currentprocess::filesource::StdoutSource,
     dist::dist::Profile,
     process,
     toolchain::names::MaybeOfficialToolchainName,

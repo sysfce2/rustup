@@ -20,10 +20,7 @@ use crate::{
         topical_doc,
     },
     command,
-    currentprocess::{
-        argsource::ArgSource,
-        filesource::{StderrSource, StdoutSource},
-    },
+    currentprocess::filesource::{StderrSource, StdoutSource},
     dist::{
         dist::{PartialToolchainDesc, Profile, TargetTriple},
         manifest::{Component, ComponentStatus},
@@ -1667,7 +1664,8 @@ fn set_profile(cfg: &mut Cfg, m: &ArgMatches) -> Result<utils::ExitCode> {
 
 fn set_auto_self_update(cfg: &mut Cfg, m: &ArgMatches) -> Result<utils::ExitCode> {
     if self_update::NEVER_SELF_UPDATE {
-        let mut args = crate::process().args_os();
+        let process = crate::process();
+        let mut args = process.args_os();
         let arg0 = args.next().map(PathBuf::from);
         let arg0 = arg0
             .as_ref()
