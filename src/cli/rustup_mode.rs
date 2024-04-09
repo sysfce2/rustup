@@ -20,7 +20,6 @@ use crate::{
         topical_doc,
     },
     command,
-    currentprocess::filesource::StderrSource,
     dist::{
         dist::{PartialToolchainDesc, Profile, TargetTriple},
         manifest::{Component, ComponentStatus},

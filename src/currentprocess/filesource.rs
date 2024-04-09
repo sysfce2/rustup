@@ -107,14 +107,6 @@ pub trait Writer: Write + Send + Sync {
     fn terminal(&self) -> ColorableTerminal;
 }
 
-// -------------- stderr -------------------------------
-
-/// Stand-in for std::io::stderr.
-#[enum_dispatch]
-pub trait StderrSource {
-    fn stderr(&self) -> Box<dyn Writer>;
-}
-
 // ----------------- OS support for writers -----------------
 
 impl WriterLock for io::StdoutLock<'_> {}
@@ -154,12 +146,6 @@ impl Writer for io::Stderr {
 
     fn terminal(&self) -> ColorableTerminal {
         ColorableTerminal::new(StreamSelector::Stderr)
-    }
-}
-
-impl StderrSource for super::OSProcess {
-    fn stderr(&self) -> Box<dyn Writer> {
-        Box::new(io::stderr())
     }
 }
 
@@ -222,12 +208,5 @@ impl Write for TestWriter {
 
     fn flush(&mut self) -> Result<()> {
         Ok(())
-    }
-}
-
-#[cfg(feature = "test")]
-impl StderrSource for super::TestProcess {
-    fn stderr(&self) -> Box<dyn Writer> {
-        Box::new(TestWriter(self.stderr.clone()))
     }
 }
