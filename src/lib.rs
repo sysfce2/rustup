@@ -13,7 +13,6 @@
 pub(crate) use crate::config::*;
 pub use crate::errors::*;
 pub(crate) use crate::notifications::*;
-use crate::process::*;
 pub(crate) use crate::utils::toml_utils;
 use anyhow::{anyhow, Result};
 use itertools::{chain, Itertools};

@@ -5,6 +5,7 @@ use anyhow::Result;
 use crate::{
     cli::{common::set_globals, job, self_update},
     command::run_command_for_dir,
+    process::Process,
     toolchain::names::{LocalToolchainName, ResolvableLocalToolchainName},
     utils::utils::{self, ExitCode},
     Cfg,
@@ -17,7 +18,7 @@ pub fn main(arg0: &str) -> Result<ExitCode> {
     let ExitCode(c) = {
         let _setup = job::setup();
 
-        let process = crate::Process::get();
+        let process = Process::get();
         let mut args = process.args_os().skip(1);
 
         // Check for a + toolchain specifier
@@ -30,7 +31,7 @@ pub fn main(arg0: &str) -> Result<ExitCode> {
             .transpose()?;
 
         // Build command args now while we know whether or not to skip arg 1.
-        let cmd_args: Vec<_> = crate::Process::get()
+        let cmd_args: Vec<_> = Process::get()
             .args_os()
             .skip(1 + toolchain.is_some() as usize)
             .collect();

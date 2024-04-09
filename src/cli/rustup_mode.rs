@@ -26,8 +26,10 @@ use crate::{
     },
     errors::RustupError,
     install::UpdateStatus,
-    process::Process,
-    terminalsource::{self, ColorableTerminal},
+    process::{
+        terminalsource::{self, ColorableTerminal},
+        Process,
+    },
     toolchain::{
         distributable::DistributableToolchain,
         names::{
@@ -1683,7 +1685,7 @@ fn set_profile(cfg: &mut Cfg, m: &ArgMatches) -> Result<utils::ExitCode> {
 
 fn set_auto_self_update(cfg: &mut Cfg, m: &ArgMatches) -> Result<utils::ExitCode> {
     if self_update::NEVER_SELF_UPDATE {
-        let process = crate::Process::get();
+        let process = Process::get();
         let mut args = process.args_os();
         let arg0 = args.next().map(PathBuf::from);
         let arg0 = arg0
