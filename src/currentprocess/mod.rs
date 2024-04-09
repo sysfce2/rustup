@@ -30,7 +30,10 @@ pub enum Process {
 
 impl Process {
     pub fn os() -> Self {
-        Self::Os(OsProcess::new())
+        Self::Os(OsProcess {
+            stderr_is_a_tty: io::stderr().is_terminal(),
+            stdout_is_a_tty: io::stdout().is_terminal(),
+        })
     }
 
     pub fn name(&self) -> Option<String> {
@@ -213,21 +216,6 @@ thread_local! {
 pub struct OsProcess {
     pub(self) stderr_is_a_tty: bool,
     pub(self) stdout_is_a_tty: bool,
-}
-
-impl OsProcess {
-    pub fn new() -> Self {
-        Self {
-            stderr_is_a_tty: io::stderr().is_terminal(),
-            stdout_is_a_tty: io::stdout().is_terminal(),
-        }
-    }
-}
-
-impl Default for OsProcess {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 // ------------ test process ----------------
