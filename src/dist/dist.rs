@@ -14,7 +14,6 @@ use thiserror::Error as ThisError;
 
 pub(crate) use crate::dist::triple::*;
 use crate::{
-    currentprocess::varsource::VarSource,
     dist::{
         download::DownloadCfg,
         manifest::{Component, Manifest as ManifestV2},

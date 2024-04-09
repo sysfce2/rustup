@@ -26,7 +26,7 @@ use rustup::cli::rustup_mode;
 #[cfg(windows)]
 use rustup::cli::self_update;
 use rustup::cli::setup_mode;
-use rustup::currentprocess::{process, varsource::VarSource, with, OSProcess};
+use rustup::currentprocess::{process, with, OSProcess};
 use rustup::env_var::RUST_RECURSION_COUNT_MAX;
 use rustup::is_proxyable_tools;
 use rustup::utils::utils;

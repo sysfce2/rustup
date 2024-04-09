@@ -1622,8 +1622,6 @@ fn doc(cfg: &Cfg, m: &ArgMatches) -> Result<utils::ExitCode> {
 
 #[cfg(not(windows))]
 fn man(cfg: &Cfg, m: &ArgMatches) -> Result<utils::ExitCode> {
-    use crate::currentprocess::varsource::VarSource;
-
     let command = m.get_one::<String>("command").unwrap();
 
     let toolchain = explicit_desc_or_dir_toolchain(cfg, m)?;
