@@ -26,7 +26,7 @@ use rustup::cli::rustup_mode;
 #[cfg(windows)]
 use rustup::cli::self_update;
 use rustup::cli::setup_mode;
-use rustup::currentprocess::{process, with, OSProcess};
+use rustup::currentprocess::{process, with, Process};
 use rustup::env_var::RUST_RECURSION_COUNT_MAX;
 use rustup::is_proxyable_tools;
 use rustup::utils::utils;
@@ -35,8 +35,8 @@ fn main() {
     #[cfg(windows)]
     pre_rustup_main_init();
 
-    let process = OSProcess::default();
-    with(process.into(), || match maybe_trace_rustup() {
+    let process = Process::os();
+    with(process, || match maybe_trace_rustup() {
         Err(e) => {
             common::report_error(&e);
             std::process::exit(1);
