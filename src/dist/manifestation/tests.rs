@@ -25,7 +25,7 @@ use crate::{
         temp, Notification,
     },
     errors::RustupError,
-    process,
+    process::TestProcess,
     test::mock::{dist::*, MockComponentBuilder, MockFile, MockInstallerBuilder},
     utils::{raw as utils_raw, utils},
 };
@@ -556,16 +556,13 @@ fn setup_from_dist_server(
         },
     };
 
-    process::with(
-        process::TestProcess::new(
-            env::current_dir().unwrap(),
-            &["rustup"],
-            HashMap::default(),
-            "",
-        )
-        .into(),
-        || f(url, &toolchain, &prefix, &download_cfg, &tmp_cx),
-    );
+    TestProcess::new(
+        env::current_dir().unwrap(),
+        &["rustup"],
+        HashMap::default(),
+        "",
+    )
+    .run(|| f(url, &toolchain, &prefix, &download_cfg, &tmp_cx));
 }
 
 fn initial_install(comps: Compressions) {

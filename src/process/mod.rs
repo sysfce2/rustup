@@ -46,6 +46,30 @@ impl Process {
         })
     }
 
+    /// Run a function in the context of a process definition.
+    ///
+    /// If the function panics, the process definition *in that thread* is cleared
+    /// by an implicitly installed global panic hook.
+    pub fn run<R>(self, f: impl FnOnce() -> R) -> R {
+        HOOK_INSTALLED.call_once(|| {
+            let orig_hook = panic::take_hook();
+            panic::set_hook(Box::new(move |info| {
+                clear_process();
+                orig_hook(info);
+            }));
+        });
+
+        PROCESS.with(|p| {
+            if let Some(old_p) = &*p.borrow() {
+                panic!("current process already set {old_p:?}");
+            }
+            *p.borrow_mut() = Some(self);
+            let result = f();
+            *p.borrow_mut() = None;
+            result
+        })
+    }
+
     pub fn name(&self) -> Option<String> {
         let arg0 = match self.var("RUSTUP_FORCE_ARG0") {
             Ok(v) => Some(v),
@@ -171,33 +195,6 @@ impl From<TestProcess> for Process {
 
 static HOOK_INSTALLED: Once = Once::new();
 
-/// Run a function in the context of a process definition.
-///
-/// If the function panics, the process definition *in that thread* is cleared
-/// by an implicitly installed global panic hook.
-pub fn with<F, R>(process: Process, f: F) -> R
-where
-    F: FnOnce() -> R,
-{
-    HOOK_INSTALLED.call_once(|| {
-        let orig_hook = panic::take_hook();
-        panic::set_hook(Box::new(move |info| {
-            clear_process();
-            orig_hook(info);
-        }));
-    });
-
-    PROCESS.with(|p| {
-        if let Some(old_p) = &*p.borrow() {
-            panic!("current process already set {old_p:?}");
-        }
-        *p.borrow_mut() = Some(process);
-        let result = f();
-        *p.borrow_mut() = None;
-        result
-    })
-}
-
 /// Internal - for the panic hook only
 fn clear_process() {
     PROCESS.with(|p| p.replace(None));
@@ -246,6 +243,11 @@ impl TestProcess {
             stderr: Arc::new(Mutex::new(Vec::new())),
         }
     }
+
+    pub(crate) fn run<R>(self, f: impl FnOnce() -> R) -> R {
+        Process::from(self).run(f)
+    }
+
     fn new_id() -> u64 {
         let low_bits: u64 = std::process::id() as u64;
         let mut rng = thread_rng();
@@ -277,7 +279,7 @@ mod tests {
 
     use rustup_macros::unit_test as test;
 
-    use super::{with, Process, TestProcess};
+    use super::{Process, TestProcess};
 
     #[test]
     fn test_instance() {
@@ -287,7 +289,8 @@ mod tests {
             HashMap::default(),
             "",
         );
-        with(proc.clone().into(), || {
+
+        proc.clone().run(|| {
             let cur = Process::get();
             assert_eq!(proc.id, cur.id(), "{:?} != {:?}", proc, cur)
         });

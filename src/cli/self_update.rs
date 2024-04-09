@@ -1306,18 +1306,19 @@ mod tests {
     use crate::cli::common;
     use crate::dist::dist::PartialToolchainDesc;
     use crate::test::{test_dir, with_rustup_home, Env};
-    use crate::{for_host, process};
+    use crate::{for_host, process::TestProcess};
 
     #[test]
     fn default_toolchain_is_stable() {
         with_rustup_home(|home| {
             let mut vars = HashMap::new();
             home.apply(&mut vars);
-            let tp = process::TestProcess {
+            let tp = TestProcess {
                 vars,
                 ..Default::default()
             };
-            process::with(tp.clone().into(), || -> Result<()> {
+
+            tp.clone().run(|| -> Result<()> {
                 // TODO: we could pass in a custom cfg to get notification
                 // callbacks rather than output to the tp sink.
                 let mut cfg = common::set_globals(false, false).unwrap();
@@ -1339,8 +1340,10 @@ mod tests {
                     .unwrap() // result
                     .unwrap() // option
                 );
+
                 Ok(())
             })?;
+
             assert_eq!(
                 for_host!(
                     r"info: profile set to 'default'
@@ -1360,11 +1363,12 @@ info: default host triple is {0}
         let cargo_home = root_dir.path().join("cargo");
         let mut vars = HashMap::new();
         vars.env("CARGO_HOME", cargo_home.to_string_lossy().to_string());
-        let tp = process::TestProcess {
+        let tp = TestProcess {
             vars,
             ..Default::default()
         };
-        process::with(tp.into(), || -> Result<()> {
+
+        tp.run(|| -> Result<()> {
             super::install_bins().unwrap();
             Ok(())
         })

@@ -19,7 +19,7 @@ use once_cell::sync::Lazy;
 use url::Url;
 
 use crate::cli::rustup_mode;
-use crate::process;
+use crate::process::TestProcess;
 use crate::test as rustup_test;
 use crate::test::const_dist_dir;
 use crate::test::this_host_triple;
@@ -721,13 +721,13 @@ impl Config {
                     .into_boxed_str(),
             );
         }
-        let tp = process::TestProcess::new(&*self.workdir.borrow(), &arg_strings, vars, "");
-        let process_res = process::with(tp.clone().into(), rustup_mode::main);
+        let tp = TestProcess::new(&*self.workdir.borrow(), &arg_strings, vars, "");
+        let process_res = tp.clone().run(rustup_mode::main);
         // convert Err's into an ec
         let ec = match process_res {
             Ok(process_res) => process_res,
             Err(e) => {
-                process::with(tp.clone().into(), || crate::cli::common::report_error(&e));
+                tp.clone().run(|| crate::cli::common::report_error(&e));
                 utils::ExitCode(1)
             }
         };

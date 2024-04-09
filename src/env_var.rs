@@ -44,7 +44,7 @@ mod tests {
     use rustup_macros::unit_test as test;
 
     use super::*;
-    use crate::process;
+    use crate::process::TestProcess;
     use crate::test::{with_saved_path, Env};
 
     #[test]
@@ -54,12 +54,12 @@ mod tests {
             "PATH",
             env::join_paths(["/home/a/.cargo/bin", "/home/b/.cargo/bin"].iter()).unwrap(),
         );
-        let tp = process::TestProcess {
+        let tp = TestProcess {
             vars,
             ..Default::default()
         };
         with_saved_path(&mut || {
-            process::with(tp.clone().into(), || {
+            tp.clone().run(|| {
                 let mut path_entries = vec![];
                 let mut cmd = Command::new("test");
 

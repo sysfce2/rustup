@@ -251,11 +251,11 @@ mod tests {
         fn assert_color_choice(env_val: &str, stream: StreamSelector, color_choice: ColorChoice) {
             let mut vars = HashMap::new();
             vars.env("RUSTUP_TERM_COLOR", env_val);
-            let tp = process::TestProcess {
+            process::TestProcess {
                 vars,
                 ..Default::default()
-            };
-            process::with(tp.into(), || {
+            }
+            .run(|| {
                 let term = ColorableTerminal::new(stream);
                 let inner = term.inner.lock().unwrap();
                 assert!(matches!(
