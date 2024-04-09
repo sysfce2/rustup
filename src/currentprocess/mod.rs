@@ -23,14 +23,14 @@ pub mod terminalsource;
 /// Allows concrete types for the currentprocess abstraction.
 #[derive(Clone, Debug)]
 pub enum Process {
-    Os(OSProcess),
+    Os(OsProcess),
     #[cfg(feature = "test")]
     Test(TestProcess),
 }
 
 impl Process {
     pub fn os() -> Self {
-        Self::Os(OSProcess::new())
+        Self::Os(OsProcess::new())
     }
 
     pub fn name(&self) -> Option<String> {
@@ -210,23 +210,23 @@ thread_local! {
 // ----------- real process -----------------
 
 #[derive(Clone, Debug)]
-pub struct OSProcess {
+pub struct OsProcess {
     pub(self) stderr_is_a_tty: bool,
     pub(self) stdout_is_a_tty: bool,
 }
 
-impl OSProcess {
+impl OsProcess {
     pub fn new() -> Self {
-        OSProcess {
+        Self {
             stderr_is_a_tty: io::stderr().is_terminal(),
             stdout_is_a_tty: io::stdout().is_terminal(),
         }
     }
 }
 
-impl Default for OSProcess {
+impl Default for OsProcess {
     fn default() -> Self {
-        OSProcess::new()
+        Self::new()
     }
 }
 
