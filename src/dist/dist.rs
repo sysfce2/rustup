@@ -760,23 +760,8 @@ pub(crate) fn update_from_dist(
         std::fs::remove_file(opts.update_hash.unwrap())?;
     }
 
-    let res = update_from_dist_(
-        opts.dl_cfg,
-        opts.update_hash,
-        opts.desc,
-        match opts.exists {
-            true => None,
-            false => Some(opts.profile),
-        },
-        prefix,
-        opts.force,
-        opts.allow_downgrade,
-        opts.old_date_version.as_ref().map(|dv| dv.0.as_str()),
-        opts.components,
-        opts.targets,
-    );
-
     // Don't leave behind an empty / broken installation directory
+    let res = update_from_dist_(prefix, opts);
     if res.is_err() && fresh_install {
         // FIXME Ignoring cascading errors
         let _ = utils::remove_dir("toolchain", prefix.path(), opts.dl_cfg.notify_handler);
@@ -785,19 +770,8 @@ pub(crate) fn update_from_dist(
     res
 }
 
-fn update_from_dist_(
-    download: DownloadCfg<'_>,
-    update_hash: Option<&Path>,
-    toolchain: &ToolchainDesc,
-    profile: Option<Profile>,
-    prefix: &InstallPrefix,
-    force_update: bool,
-    allow_downgrade: bool,
-    old_date: Option<&str>,
-    components: &[&str],
-    targets: &[&str],
-) -> Result<Option<String>> {
-    let mut toolchain = toolchain.clone();
+fn update_from_dist_(prefix: &InstallPrefix, opts: &DistOptions<'_>) -> Result<Option<String>> {
+    let mut toolchain = opts.desc.clone();
     let mut fetched = String::new();
     let mut first_err = None;
     let backtrack = toolchain.channel == "nightly" && toolchain.date.is_none();
@@ -826,10 +800,12 @@ fn update_from_dist_(
     // We could arguably use the date of the first rustup release here, but that would break a
     // bunch of the tests, which (inexplicably) use 2015-01-01 as their manifest dates.
     let first_manifest = date_from_manifest_date("2014-12-20").unwrap();
-    let old_manifest = old_date
-        .and_then(date_from_manifest_date)
+    let old_manifest = opts
+        .old_date_version
+        .as_ref()
+        .and_then(|(d, _)| date_from_manifest_date(d))
         .unwrap_or(first_manifest);
-    let last_manifest = if allow_downgrade {
+    let last_manifest = if opts.allow_downgrade {
         first_manifest
     } else {
         old_manifest
@@ -842,14 +818,17 @@ fn update_from_dist_(
 
     loop {
         match try_update_from_dist_(
-            download,
-            update_hash,
+            opts.dl_cfg,
+            opts.update_hash,
             &toolchain,
-            profile,
+            match opts.exists {
+                true => None,
+                false => Some(opts.profile),
+            },
             prefix,
-            force_update,
-            components,
-            targets,
+            opts.force,
+            opts.components,
+            opts.targets,
             &mut fetched,
         ) {
             Ok(v) => break Ok(v),
@@ -861,11 +840,13 @@ fn update_from_dist_(
                 let cause = e.downcast_ref::<DistError>();
                 match cause {
                     Some(DistError::ToolchainComponentsMissing(components, manifest, ..)) => {
-                        (download.notify_handler)(Notification::SkippingNightlyMissingComponent(
-                            &toolchain,
-                            current_manifest.as_ref().unwrap_or(manifest),
-                            components,
-                        ));
+                        (opts.dl_cfg.notify_handler)(
+                            Notification::SkippingNightlyMissingComponent(
+                                &toolchain,
+                                current_manifest.as_ref().unwrap_or(manifest),
+                                components,
+                            ),
+                        );
 
                         if first_err.is_none() {
                             first_err = Some(e);
