@@ -993,24 +993,14 @@ fn try_dist_update(
             };
         }
         Ok(None) => return Ok(None),
-        Err(any) => {
-            enum Cases {
-                DNE,
-                CF,
-                Other,
-            }
-            let case = match any.downcast_ref::<RustupError>() {
-                Some(RustupError::ChecksumFailed { .. }) => Cases::CF,
-                Some(RustupError::DownloadNotExists { .. }) => Cases::DNE,
-                _ => Cases::Other,
-            };
-            match case {
-                Cases::CF => return Ok(None),
-                Cases::DNE => {
+        Err(err) => {
+            match err.downcast_ref::<RustupError>() {
+                Some(RustupError::ChecksumFailed { .. }) => return Ok(None),
+                Some(RustupError::DownloadNotExists { .. }) => {
                     // Proceed to try v1 as a fallback
                     (opts.dl_cfg.notify_handler)(Notification::DownloadingLegacyManifest);
                 }
-                Cases::Other => return Err(any),
+                _ => return Err(err),
             }
         }
     }
@@ -1018,34 +1008,20 @@ fn try_dist_update(
     // If the v2 manifest is not found then try v1
     let manifest = match dl_v1_manifest(opts.dl_cfg, opts.desc) {
         Ok(m) => m,
-        Err(any) => {
-            enum Cases {
-                DNE,
-                CF,
-                Other,
-            }
-            let case = match any.downcast_ref::<RustupError>() {
-                Some(RustupError::ChecksumFailed { .. }) => Cases::CF,
-                Some(RustupError::DownloadNotExists { .. }) => Cases::DNE,
-                _ => Cases::Other,
-            };
-            match case {
-                Cases::DNE => {
-                    bail!(DistError::MissingReleaseForToolchain(
+        Err(err) => match err.downcast_ref::<RustupError>() {
+            Some(RustupError::ChecksumFailed { .. }) => return Err(err),
+            Some(RustupError::DownloadNotExists { .. }) => bail!(
+                DistError::MissingReleaseForToolchain(opts.desc.manifest_name())
+            ),
+            _ => {
+                return Err(err).with_context(|| {
+                    format!(
+                        "failed to download manifest for '{}'",
                         opts.desc.manifest_name()
-                    ));
-                }
-                Cases::CF => return Err(any),
-                Cases::Other => {
-                    return Err(any).with_context(|| {
-                        format!(
-                            "failed to download manifest for '{}'",
-                            opts.desc.manifest_name()
-                        )
-                    });
-                }
+                    )
+                })
             }
-        }
+        },
     };
     let result = manifestation.update_v1(
         &manifest,
