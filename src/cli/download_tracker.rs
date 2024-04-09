@@ -4,8 +4,8 @@ use std::io::Write;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use crate::currentprocess::{process, terminalsource};
 use crate::dist::Notification as In;
+use crate::process::{process, terminalsource};
 use crate::utils::units::{Size, Unit, UnitMode};
 use crate::utils::Notification as Un;
 use crate::Notification;

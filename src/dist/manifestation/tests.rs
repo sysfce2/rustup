@@ -16,7 +16,6 @@ use url::Url;
 use rustup_macros::unit_test as test;
 
 use crate::{
-    currentprocess,
     dist::{
         dist::{Profile, TargetTriple, ToolchainDesc, DEFAULT_DIST_SERVER},
         download::DownloadCfg,
@@ -26,6 +25,7 @@ use crate::{
         temp, Notification,
     },
     errors::RustupError,
+    process,
     test::mock::{dist::*, MockComponentBuilder, MockFile, MockInstallerBuilder},
     utils::{raw as utils_raw, utils},
 };
@@ -556,8 +556,8 @@ fn setup_from_dist_server(
         },
     };
 
-    currentprocess::with(
-        currentprocess::TestProcess::new(
+    process::with(
+        process::TestProcess::new(
             env::current_dir().unwrap(),
             &["rustup"],
             HashMap::default(),

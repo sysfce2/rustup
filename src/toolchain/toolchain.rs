@@ -15,9 +15,9 @@ use wait_timeout::ChildExt;
 
 use crate::{
     config::Cfg,
-    currentprocess::process,
     env_var, install,
     notifications::Notification,
+    process::process,
     utils::{raw::open_dir_following_links, utils},
     RustupError,
 };

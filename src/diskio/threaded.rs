@@ -305,7 +305,7 @@ impl<'a> Executor for Threaded<'a> {
         self.tx
             .send(Task::Sentinel)
             .expect("must still be listening");
-        if crate::currentprocess::process().var("RUSTUP_DEBUG").is_ok() {
+        if crate::process::process().var("RUSTUP_DEBUG").is_ok() {
             // debug! is in the cli layer. erg. And notification stack is still terrible.
             debug!("");
             for (bucket, pool) in &self.vec_pools {

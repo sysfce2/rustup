@@ -11,9 +11,9 @@
 #![recursion_limit = "1024"]
 
 pub(crate) use crate::config::*;
-use crate::currentprocess::*;
 pub use crate::errors::*;
 pub(crate) use crate::notifications::*;
+use crate::process::*;
 pub(crate) use crate::utils::toml_utils;
 use anyhow::{anyhow, Result};
 use itertools::{chain, Itertools};
@@ -80,7 +80,6 @@ fn component_for_bin(binary: &str) -> Option<&'static str> {
 pub mod cli;
 mod command;
 mod config;
-pub mod currentprocess;
 mod diskio;
 pub mod dist;
 pub mod env_var;
@@ -88,6 +87,7 @@ pub mod errors;
 mod fallback_settings;
 mod install;
 pub mod notifications;
+pub mod process;
 mod settings;
 #[cfg(feature = "test")]
 pub mod test;

@@ -58,7 +58,7 @@ use anyhow::{anyhow, Context, Result};
 use cfg_if::cfg_if;
 use same_file::Handle;
 
-use crate::currentprocess::terminalsource;
+use crate::process::terminalsource;
 use crate::{
     cli::{
         common::{self, ignorable_error, report_error, Confirm, PackageUpdate},
@@ -1306,18 +1306,18 @@ mod tests {
     use crate::cli::common;
     use crate::dist::dist::PartialToolchainDesc;
     use crate::test::{test_dir, with_rustup_home, Env};
-    use crate::{currentprocess, for_host};
+    use crate::{for_host, process};
 
     #[test]
     fn default_toolchain_is_stable() {
         with_rustup_home(|home| {
             let mut vars = HashMap::new();
             home.apply(&mut vars);
-            let tp = currentprocess::TestProcess {
+            let tp = process::TestProcess {
                 vars,
                 ..Default::default()
             };
-            currentprocess::with(tp.clone().into(), || -> Result<()> {
+            process::with(tp.clone().into(), || -> Result<()> {
                 // TODO: we could pass in a custom cfg to get notification
                 // callbacks rather than output to the tp sink.
                 let mut cfg = common::set_globals(false, false).unwrap();
@@ -1360,11 +1360,11 @@ info: default host triple is {0}
         let cargo_home = root_dir.path().join("cargo");
         let mut vars = HashMap::new();
         vars.env("CARGO_HOME", cargo_home.to_string_lossy().to_string());
-        let tp = currentprocess::TestProcess {
+        let tp = process::TestProcess {
             vars,
             ..Default::default()
         };
-        currentprocess::with(tp.into(), || -> Result<()> {
+        process::with(tp.into(), || -> Result<()> {
             super::install_bins().unwrap();
             Ok(())
         })

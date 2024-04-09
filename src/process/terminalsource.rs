@@ -244,18 +244,18 @@ mod tests {
     use rustup_macros::unit_test as test;
 
     use super::*;
-    use crate::{currentprocess, test::Env};
+    use crate::{process, test::Env};
 
     #[test]
     fn term_color_choice() {
         fn assert_color_choice(env_val: &str, stream: StreamSelector, color_choice: ColorChoice) {
             let mut vars = HashMap::new();
             vars.env("RUSTUP_TERM_COLOR", env_val);
-            let tp = currentprocess::TestProcess {
+            let tp = process::TestProcess {
                 vars,
                 ..Default::default()
             };
-            currentprocess::with(tp.into(), || {
+            process::with(tp.into(), || {
                 let term = ColorableTerminal::new(stream);
                 let inner = term.inner.lock().unwrap();
                 assert!(matches!(
