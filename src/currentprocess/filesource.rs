@@ -107,14 +107,6 @@ pub trait Writer: Write + Send + Sync {
     fn terminal(&self) -> ColorableTerminal;
 }
 
-// -------------- stdout -------------------------------
-
-/// Stand-in for [`std::io::stdout`].
-#[enum_dispatch]
-pub trait StdoutSource {
-    fn stdout(&self) -> Box<dyn Writer>;
-}
-
 // -------------- stderr -------------------------------
 
 /// Stand-in for std::io::stderr.
@@ -142,12 +134,6 @@ impl Writer for io::Stdout {
 
     fn terminal(&self) -> ColorableTerminal {
         ColorableTerminal::new(StreamSelector::Stdout)
-    }
-}
-
-impl StdoutSource for super::OSProcess {
-    fn stdout(&self) -> Box<dyn Writer> {
-        Box::new(io::stdout())
     }
 }
 
@@ -200,7 +186,7 @@ pub(super) type TestWriterInner = Arc<Mutex<Vec<u8>>>;
 /// A thread-safe test file handle that pretends to be e.g. stdout.
 #[derive(Clone, Default)]
 #[cfg(feature = "test")]
-pub(super) struct TestWriter(TestWriterInner);
+pub(super) struct TestWriter(pub(super) TestWriterInner);
 
 #[cfg(feature = "test")]
 impl TestWriter {
@@ -236,13 +222,6 @@ impl Write for TestWriter {
 
     fn flush(&mut self) -> Result<()> {
         Ok(())
-    }
-}
-
-#[cfg(feature = "test")]
-impl StdoutSource for super::TestProcess {
-    fn stdout(&self) -> Box<dyn Writer> {
-        Box::new(TestWriter(self.stdout.clone()))
     }
 }
 

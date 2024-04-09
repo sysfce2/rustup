@@ -65,7 +65,7 @@ use crate::{
         errors::*,
         markdown::md,
     },
-    currentprocess::{filesource::StdoutSource, varsource::VarSource},
+    currentprocess::varsource::VarSource,
     dist::dist::{self, PartialToolchainDesc, Profile, TargetTriple, ToolchainDesc},
     install::UpdateStatus,
     process,
