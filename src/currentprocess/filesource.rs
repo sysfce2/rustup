@@ -93,9 +93,9 @@ impl WriterLock for io::StdoutLock<'_> {}
 impl Writer for io::Stdout {
     fn is_a_tty(&self) -> bool {
         match process() {
-            crate::currentprocess::Process::OSProcess(p) => p.stdout_is_a_tty,
+            crate::currentprocess::Process::Os(p) => p.stdout_is_a_tty,
             #[cfg(feature = "test")]
-            crate::currentprocess::Process::TestProcess(_) => unreachable!(),
+            crate::currentprocess::Process::Test(_) => unreachable!(),
         }
     }
 
@@ -113,9 +113,9 @@ impl WriterLock for io::StderrLock<'_> {}
 impl Writer for io::Stderr {
     fn is_a_tty(&self) -> bool {
         match process() {
-            crate::currentprocess::Process::OSProcess(p) => p.stderr_is_a_tty,
+            crate::currentprocess::Process::Os(p) => p.stderr_is_a_tty,
             #[cfg(feature = "test")]
-            crate::currentprocess::Process::TestProcess(_) => unreachable!(),
+            crate::currentprocess::Process::Test(_) => unreachable!(),
         }
     }
 
