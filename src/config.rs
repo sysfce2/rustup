@@ -21,7 +21,7 @@ use crate::{
     fallback_settings::FallbackSettings,
     install::UpdateStatus,
     notifications::*,
-    process,
+    process::Process,
     settings::{Settings, SettingsFile, DEFAULT_METADATA_VERSION},
     toolchain::{
         distributable::DistributableToolchain,
@@ -199,7 +199,7 @@ impl Cfg {
             // If present, use the RUSTUP_OVERRIDE_UNIX_FALLBACK_SETTINGS environment
             // variable as settings path, or UNIX_FALLBACK_SETTINGS otherwise
             FallbackSettings::new(
-                match process().var("RUSTUP_OVERRIDE_UNIX_FALLBACK_SETTINGS") {
+                match Process::get().var("RUSTUP_OVERRIDE_UNIX_FALLBACK_SETTINGS") {
                     Ok(s) => PathBuf::from(s),
                     Err(_) => PathBuf::from(UNIX_FALLBACK_SETTINGS),
                 },
@@ -215,7 +215,7 @@ impl Cfg {
         // Figure out get_default_host_triple before Config is populated
         let default_host_triple = settings_file.with(|s| Ok(get_default_host_triple(s)))?;
         // Environment override
-        let env_override = process()
+        let env_override = Process::get()
             .var("RUSTUP_TOOLCHAIN")
             .ok()
             .and_then(utils::if_not_empty)
@@ -224,11 +224,11 @@ impl Cfg {
             .map(|t| t.resolve(&default_host_triple))
             .transpose()?;
 
-        let dist_root_server = match process().var("RUSTUP_DIST_SERVER") {
+        let dist_root_server = match Process::get().var("RUSTUP_DIST_SERVER") {
             Ok(ref s) if !s.is_empty() => s.clone(),
             _ => {
                 // For backward compatibility
-                process()
+                Process::get()
                     .var("RUSTUP_DIST_ROOT")
                     .ok()
                     .and_then(utils::if_not_empty)

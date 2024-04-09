@@ -29,6 +29,16 @@ pub enum Process {
 }
 
 impl Process {
+    /// Obtain the current instance of CurrentProcess
+    ///
+    /// Panics if no process instance has been set.
+    pub fn get() -> Self {
+        match PROCESS.with(|p| p.borrow().clone()) {
+            Some(p) => p,
+            None => panic!("no process instance"),
+        }
+    }
+
     pub fn os() -> Self {
         Self::Os(OsProcess {
             stderr_is_a_tty: io::stderr().is_terminal(),
@@ -159,19 +169,6 @@ impl From<TestProcess> for Process {
     }
 }
 
-/// Obtain the current instance of CurrentProcess
-pub fn process() -> Process {
-    home_process()
-}
-
-/// Obtain the current instance of HomeProcess
-pub(crate) fn home_process() -> Process {
-    match PROCESS.with(|p| p.borrow().clone()) {
-        None => panic!("No process instance"),
-        Some(p) => p,
-    }
-}
-
 static HOOK_INSTALLED: Once = Once::new();
 
 /// Run a function in the context of a process definition.
@@ -280,7 +277,7 @@ mod tests {
 
     use rustup_macros::unit_test as test;
 
-    use super::{process, with, TestProcess};
+    use super::{with, Process, TestProcess};
 
     #[test]
     fn test_instance() {
@@ -291,7 +288,8 @@ mod tests {
             "",
         );
         with(proc.clone().into(), || {
-            assert_eq!(proc.id, process().id(), "{:?} != {:?}", proc, process())
+            let cur = Process::get();
+            assert_eq!(proc.id, cur.id(), "{:?} != {:?}", proc, cur)
         });
     }
 }

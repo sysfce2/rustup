@@ -17,7 +17,7 @@ use crate::{
     config::Cfg,
     env_var, install,
     notifications::Notification,
-    process::process,
+    process::Process,
     utils::{raw::open_dir_following_links, utils},
     RustupError,
 };
@@ -136,7 +136,7 @@ impl<'a> Toolchain<'a> {
             pub const LOADER_PATH: &str = "DYLD_FALLBACK_LIBRARY_PATH";
         }
         if cfg!(target_os = "macos")
-            && process()
+            && Process::get()
                 .var_os(sysenv::LOADER_PATH)
                 .filter(|x| x.len() > 0)
                 .is_none()
@@ -144,7 +144,7 @@ impl<'a> Toolchain<'a> {
             // These are the defaults when DYLD_FALLBACK_LIBRARY_PATH isn't
             // set or set to an empty string. Since we are explicitly setting
             // the value, make sure the defaults still work.
-            if let Some(home) = process().var_os("HOME") {
+            if let Some(home) = Process::get().var_os("HOME") {
                 new_path.push(PathBuf::from(home).join("lib"));
             }
             new_path.push(PathBuf::from("/usr/local/lib"));
@@ -176,7 +176,7 @@ impl<'a> Toolchain<'a> {
             // testing the fix. The default is now off, but this is left here
             // just in case there are problems. Consider removing in the
             // future if it doesn't seem necessary.
-            if process()
+            if Process::get()
                 .var_os("RUSTUP_WINDOWS_PATH_ADD_BIN")
                 .map_or(false, |s| s == "1")
             {
@@ -237,7 +237,7 @@ impl<'a> Toolchain<'a> {
         }
     }
 
-    #[cfg_attr(feature="otel", tracing::instrument(err,fields(binary, recursion=process().var("RUST_RECURSION_COUNT").ok())))]
+    #[cfg_attr(feature="otel", tracing::instrument(err,fields(binary, recursion=Process::get().var("RUST_RECURSION_COUNT").ok())))]
     pub fn create_command<T: AsRef<OsStr> + Debug>(
         &self,
         binary: T,
@@ -258,7 +258,7 @@ impl<'a> Toolchain<'a> {
         let path = if utils::is_file(&bin_path) {
             &bin_path
         } else {
-            let recursion_count = process()
+            let recursion_count = Process::get()
                 .var("RUST_RECURSION_COUNT")
                 .ok()
                 .and_then(|s| s.parse().ok())

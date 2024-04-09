@@ -1,7 +1,7 @@
 use std::fmt;
 use std::io::Write;
 
-use crate::process::{process, terminalsource};
+use crate::process::{terminalsource, Process};
 
 macro_rules! warn {
     ( $ ( $ arg : tt ) * ) => ( $crate::cli::log::warn_fmt ( format_args ! ( $ ( $ arg ) * ) ) )
@@ -22,7 +22,7 @@ macro_rules! debug {
 }
 
 pub(crate) fn warn_fmt(args: fmt::Arguments<'_>) {
-    let mut t = process().stderr().terminal();
+    let mut t = Process::get().stderr().terminal();
     let _ = t.fg(terminalsource::Color::Yellow);
     let _ = t.attr(terminalsource::Attr::Bold);
     let _ = write!(t.lock(), "warning: ");
@@ -32,7 +32,7 @@ pub(crate) fn warn_fmt(args: fmt::Arguments<'_>) {
 }
 
 pub(crate) fn err_fmt(args: fmt::Arguments<'_>) {
-    let mut t = process().stderr().terminal();
+    let mut t = Process::get().stderr().terminal();
     let _ = t.fg(terminalsource::Color::Red);
     let _ = t.attr(terminalsource::Attr::Bold);
     let _ = write!(t.lock(), "error: ");
@@ -42,7 +42,7 @@ pub(crate) fn err_fmt(args: fmt::Arguments<'_>) {
 }
 
 pub(crate) fn info_fmt(args: fmt::Arguments<'_>) {
-    let mut t = process().stderr().terminal();
+    let mut t = Process::get().stderr().terminal();
     let _ = t.attr(terminalsource::Attr::Bold);
     let _ = write!(t.lock(), "info: ");
     let _ = t.reset();
@@ -51,7 +51,7 @@ pub(crate) fn info_fmt(args: fmt::Arguments<'_>) {
 }
 
 pub(crate) fn verbose_fmt(args: fmt::Arguments<'_>) {
-    let mut t = process().stderr().terminal();
+    let mut t = Process::get().stderr().terminal();
     let _ = t.fg(terminalsource::Color::Magenta);
     let _ = t.attr(terminalsource::Attr::Bold);
     let _ = write!(t.lock(), "verbose: ");
@@ -61,8 +61,8 @@ pub(crate) fn verbose_fmt(args: fmt::Arguments<'_>) {
 }
 
 pub(crate) fn debug_fmt(args: fmt::Arguments<'_>) {
-    if process().var("RUSTUP_DEBUG").is_ok() {
-        let mut t = process().stderr().terminal();
+    if Process::get().var("RUSTUP_DEBUG").is_ok() {
+        let mut t = Process::get().stderr().terminal();
         let _ = t.fg(terminalsource::Color::Blue);
         let _ = t.attr(terminalsource::Attr::Bold);
         let _ = write!(t.lock(), "debug: ");

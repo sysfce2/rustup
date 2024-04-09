@@ -29,7 +29,7 @@ use std::path::PathBuf;
 use anyhow::{bail, Result};
 
 use super::utils;
-use crate::process;
+use crate::process::Process;
 
 pub(crate) type Shell = Box<dyn UnixShell>;
 
@@ -159,8 +159,8 @@ impl Zsh {
         use std::ffi::OsStr;
         use std::os::unix::ffi::OsStrExt;
 
-        if matches!(process().var("SHELL"), Ok(sh) if sh.contains("zsh")) {
-            match process().var("ZDOTDIR") {
+        if matches!(Process::get().var("SHELL"), Ok(sh) if sh.contains("zsh")) {
+            match Process::get().var("ZDOTDIR") {
                 Ok(dir) if !dir.is_empty() => Ok(PathBuf::from(dir)),
                 _ => bail!("Zsh setup failed."),
             }
@@ -179,7 +179,7 @@ impl Zsh {
 impl UnixShell for Zsh {
     fn does_exist(&self) -> bool {
         // zsh has to either be the shell or be callable for zsh setup.
-        matches!(process().var("SHELL"), Ok(sh) if sh.contains("zsh"))
+        matches!(Process::get().var("SHELL"), Ok(sh) if sh.contains("zsh"))
             || utils::find_cmd(&["zsh"]).is_some()
     }
 
@@ -211,14 +211,14 @@ struct Fish;
 impl UnixShell for Fish {
     fn does_exist(&self) -> bool {
         // fish has to either be the shell or be callable for fish setup.
-        matches!(process().var("SHELL"), Ok(sh) if sh.contains("fish"))
+        matches!(Process::get().var("SHELL"), Ok(sh) if sh.contains("fish"))
             || utils::find_cmd(&["fish"]).is_some()
     }
 
     // > "$XDG_CONFIG_HOME/fish/conf.d" (or "~/.config/fish/conf.d" if that variable is unset) for the user
     // from <https://github.com/fish-shell/fish-shell/issues/3170#issuecomment-228311857>
     fn rcfiles(&self) -> Vec<PathBuf> {
-        let p0 = process().var("XDG_CONFIG_HOME").ok().map(|p| {
+        let p0 = Process::get().var("XDG_CONFIG_HOME").ok().map(|p| {
             let mut path = PathBuf::from(p);
             path.push("fish/conf.d/rustup.fish");
             path

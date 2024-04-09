@@ -17,7 +17,7 @@ pub fn main(arg0: &str) -> Result<ExitCode> {
     let ExitCode(c) = {
         let _setup = job::setup();
 
-        let process = crate::process();
+        let process = crate::Process::get();
         let mut args = process.args_os().skip(1);
 
         // Check for a + toolchain specifier
@@ -30,7 +30,7 @@ pub fn main(arg0: &str) -> Result<ExitCode> {
             .transpose()?;
 
         // Build command args now while we know whether or not to skip arg 1.
-        let cmd_args: Vec<_> = crate::process()
+        let cmd_args: Vec<_> = crate::Process::get()
             .args_os()
             .skip(1 + toolchain.is_some() as usize)
             .collect();

@@ -11,9 +11,9 @@ use sha2::Sha256;
 use url::Url;
 
 use crate::errors::*;
+use crate::process::Process;
 use crate::utils::notifications::Notification;
 use crate::utils::raw;
-use crate::{home_process, process};
 
 #[cfg(not(windows))]
 pub(crate) use crate::utils::utils::raw::find_cmd;
@@ -220,8 +220,8 @@ fn download_file_(
     // Download the file
 
     // Keep the curl env var around for a bit
-    let use_curl_backend = process().var_os("RUSTUP_USE_CURL").is_some();
-    let use_rustls = process().var_os("RUSTUP_USE_RUSTLS").is_some();
+    let use_curl_backend = Process::get().var_os("RUSTUP_USE_CURL").is_some();
+    let use_rustls = Process::get().var_os("RUSTUP_USE_RUSTLS").is_some();
     let (backend, notification) = if use_curl_backend {
         (Backend::Curl, Notification::UsingCurl)
     } else {
@@ -477,7 +477,7 @@ pub(crate) fn make_executable(path: &Path) -> Result<()> {
 }
 
 pub fn current_dir() -> Result<PathBuf> {
-    process()
+    Process::get()
         .current_dir()
         .context(RustupError::LocatingWorkingDir)
 }
@@ -494,18 +494,18 @@ pub(crate) fn to_absolute<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
 }
 
 pub(crate) fn home_dir() -> Option<PathBuf> {
-    home::home_dir_with_env(&home_process())
+    home::home_dir_with_env(&Process::get())
 }
 
 pub(crate) fn cargo_home() -> Result<PathBuf> {
-    home::cargo_home_with_env(&home_process()).context("failed to determine cargo home")
+    home::cargo_home_with_env(&Process::get()).context("failed to determine cargo home")
 }
 
 // Creates a ~/.rustup folder
 pub(crate) fn create_rustup_home() -> Result<()> {
     // If RUSTUP_HOME is set then don't make any assumptions about where it's
     // ok to put ~/.rustup
-    if process().var_os("RUSTUP_HOME").is_some() {
+    if Process::get().var_os("RUSTUP_HOME").is_some() {
         return Ok(());
     }
 
@@ -525,7 +525,7 @@ fn rustup_home_in_user_dir() -> Result<PathBuf> {
 }
 
 pub(crate) fn rustup_home() -> Result<PathBuf> {
-    home::rustup_home_with_env(&home_process()).context("failed to determine rustup home dir")
+    home::rustup_home_with_env(&Process::get()).context("failed to determine rustup home dir")
 }
 
 pub(crate) fn format_path_for_display(path: &str) -> String {
@@ -587,7 +587,7 @@ where
                     OperationResult::Retry(e)
                 }
                 #[cfg(target_os = "linux")]
-                _ if process().var_os("RUSTUP_PERMIT_COPY_RENAME").is_some()
+                _ if Process::get().var_os("RUSTUP_PERMIT_COPY_RENAME").is_some()
                     && Some(EXDEV) == e.raw_os_error() =>
                 {
                     match copy_and_delete(name, src, dest, notify_handler) {

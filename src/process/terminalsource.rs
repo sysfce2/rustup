@@ -11,7 +11,7 @@ use termcolor::{ColorChoice, ColorSpec, StandardStream, StandardStreamLock, Writ
 
 #[cfg(feature = "test")]
 use super::filesource::{TestWriter, TestWriterLock};
-use super::process;
+use super::Process;
 
 /// Select what stream to make a terminal on
 pub(super) enum StreamSelector {
@@ -26,12 +26,12 @@ pub(super) enum StreamSelector {
 impl StreamSelector {
     fn is_a_tty(&self) -> bool {
         match self {
-            StreamSelector::Stdout => match process() {
+            StreamSelector::Stdout => match Process::get() {
                 super::Process::Os(p) => p.stdout_is_a_tty,
                 #[cfg(feature = "test")]
                 super::Process::Test(_) => unreachable!(),
             },
-            StreamSelector::Stderr => match process() {
+            StreamSelector::Stderr => match Process::get() {
                 super::Process::Os(p) => p.stderr_is_a_tty,
                 #[cfg(feature = "test")]
                 super::Process::Test(_) => unreachable!(),
@@ -84,7 +84,7 @@ impl ColorableTerminal {
     /// then color commands will be sent to the stream.
     /// Otherwise color commands are discarded.
     pub(super) fn new(stream: StreamSelector) -> Self {
-        let env_override = process()
+        let env_override = Process::get()
             .var("RUSTUP_TERM_COLOR")
             .map(|it| it.to_lowercase());
         let choice = match env_override.as_deref() {

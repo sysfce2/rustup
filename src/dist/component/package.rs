@@ -16,7 +16,7 @@ use crate::dist::component::components::*;
 use crate::dist::component::transaction::*;
 use crate::dist::temp;
 use crate::errors::*;
-use crate::process;
+use crate::process::Process;
 use crate::utils::notifications::Notification;
 use crate::utils::utils;
 
@@ -178,7 +178,7 @@ fn unpack_ram(
         // Rustup does not know how much RAM the machine has: use the minimum
         minimum_ram
     };
-    let unpack_ram = match process()
+    let unpack_ram = match Process::get()
         .var("RUSTUP_UNPACK_RAM")
         .ok()
         .and_then(|budget_str| budget_str.parse::<usize>().ok())
@@ -457,7 +457,7 @@ fn unpack_without_first_dir<R: Read>(
                         // Tar has item before containing directory
                         // Complain about this so we can see if these exist.
                         writeln!(
-                            process().stderr().lock(),
+                            Process::get().stderr().lock(),
                             "Unexpected: missing parent '{}' for '{}'",
                             parent.display(),
                             entry.path()?.display()

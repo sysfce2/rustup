@@ -13,7 +13,7 @@ use super::common;
 use super::{install_bins, InstallOpts};
 use crate::cli::download_tracker::DownloadTracker;
 use crate::dist::dist::TargetTriple;
-use crate::process;
+use crate::process::{self, Process};
 use crate::utils::utils;
 use crate::utils::Notification;
 
@@ -21,9 +21,9 @@ use winreg::enums::{RegType, HKEY_CURRENT_USER, KEY_READ, KEY_WRITE};
 use winreg::{RegKey, RegValue};
 
 pub(crate) fn ensure_prompt() -> Result<()> {
-    writeln!(process().stdout().lock(),)?;
+    writeln!(Process::get().stdout().lock(),)?;
     writeln!(
-        process().stdout().lock(),
+        Process::get().stdout().lock(),
         "Press the Enter key to continue."
     )?;
     common::read_line()?;
@@ -31,7 +31,7 @@ pub(crate) fn ensure_prompt() -> Result<()> {
 }
 
 fn choice(max: u8) -> Result<Option<u8>> {
-    write!(process().stdout().lock(), ">")?;
+    write!(Process::get().stdout().lock(), ">")?;
 
     let _ = std::io::stdout().flush();
     let input = common::read_line()?;
@@ -41,33 +41,33 @@ fn choice(max: u8) -> Result<Option<u8>> {
         _ => None,
     };
 
-    writeln!(process().stdout().lock())?;
+    writeln!(Process::get().stdout().lock())?;
     Ok(r)
 }
 
 pub(crate) fn choose_vs_install() -> Result<Option<VsInstallPlan>> {
     writeln!(
-        process().stdout().lock(),
+        Process::get().stdout().lock(),
         "\n1) Quick install via the Visual Studio Community installer"
     )?;
     writeln!(
-        process().stdout().lock(),
+        Process::get().stdout().lock(),
         "   (free for individuals, academic uses, and open source)."
     )?;
     writeln!(
-        process().stdout().lock(),
+        Process::get().stdout().lock(),
         "\n2) Manually install the prerequisites"
     )?;
     writeln!(
-        process().stdout().lock(),
+        Process::get().stdout().lock(),
         "   (for enterprise and advanced users)."
     )?;
     writeln!(
-        process().stdout().lock(),
+        Process::get().stdout().lock(),
         "\n3) Don't install the prerequisites"
     )?;
     writeln!(
-        process().stdout().lock(),
+        Process::get().stdout().lock(),
         "   (if you're targeting the GNU ABI).\n"
     )?;
 
@@ -75,7 +75,7 @@ pub(crate) fn choose_vs_install() -> Result<Option<VsInstallPlan>> {
         if let Some(n) = choice(3)? {
             break n;
         }
-        writeln!(process().stdout().lock(), "Select option 1, 2 or 3")?;
+        writeln!(Process::get().stdout().lock(), "Select option 1, 2 or 3")?;
     };
     let plan = match choice {
         1 => Some(VsInstallPlan::Automatic),
@@ -95,7 +95,7 @@ pub(crate) enum VsInstallPlan {
 // installed
 pub(crate) fn do_msvc_check(opts: &InstallOpts<'_>) -> Option<VsInstallPlan> {
     // Test suite skips this since it's env dependent
-    if process().var("RUSTUP_INIT_SKIP_MSVC_CHECK").is_ok() {
+    if Process::get().var("RUSTUP_INIT_SKIP_MSVC_CHECK").is_ok() {
         return None;
     }
 
@@ -253,7 +253,7 @@ pub(crate) fn try_install_msvc(opts: &InstallOpts<'_>) -> Result<ContinueInstall
 }
 
 fn has_windows_sdk_libs() -> bool {
-    if let Some(paths) = process().var_os("lib") {
+    if let Some(paths) = Process::get().var_os("lib") {
         for mut path in split_paths(&paths) {
             path.push("kernel32.lib");
             if path.exists() {

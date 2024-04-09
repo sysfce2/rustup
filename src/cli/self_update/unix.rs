@@ -5,7 +5,7 @@ use anyhow::{bail, Context, Result};
 
 use super::install_bins;
 use super::shell;
-use crate::process;
+use crate::process::Process;
 use crate::utils::utils;
 use crate::utils::Notification;
 
@@ -16,14 +16,14 @@ pub(crate) fn do_anti_sudo_check(no_prompt: bool) -> Result<utils::ExitCode> {
     pub(crate) fn home_mismatch() -> (bool, PathBuf, PathBuf) {
         let fallback = || (false, PathBuf::new(), PathBuf::new());
         // test runner should set this, nothing else
-        if process()
+        if Process::get()
             .var_os("RUSTUP_INIT_SKIP_SUDO_CHECK")
             .map_or(false, |s| s == "yes")
         {
             return fallback();
         }
 
-        match (utils::home_dir_from_passwd(), process().var_os("HOME")) {
+        match (utils::home_dir_from_passwd(), Process::get().var_os("HOME")) {
             (Some(pw), Some(eh)) if eh != pw => return (true, PathBuf::from(eh), pw),
             (None, _) => warn!("getpwuid_r: couldn't get user data"),
             _ => {}

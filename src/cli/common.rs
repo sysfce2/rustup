@@ -23,13 +23,13 @@ use crate::utils::utils;
 use crate::{
     dist::notifications as dist_notifications, toolchain::distributable::DistributableToolchain,
 };
-use crate::{process, toolchain::toolchain::Toolchain};
+use crate::{process::Process, toolchain::toolchain::Toolchain};
 use crate::{Cfg, Notification};
 
 pub(crate) const WARN_COMPLETE_PROFILE: &str = "downloading with complete profile isn't recommended unless you are a developer of the rust language";
 
 pub(crate) fn confirm(question: &str, default: bool) -> Result<bool> {
-    write!(process().stdout().lock(), "{question} ")?;
+    write!(Process::get().stdout().lock(), "{question} ")?;
     let _ = std::io::stdout().flush();
     let input = read_line()?;
 
@@ -40,7 +40,7 @@ pub(crate) fn confirm(question: &str, default: bool) -> Result<bool> {
         _ => false,
     };
 
-    writeln!(process().stdout().lock())?;
+    writeln!(Process::get().stdout().lock())?;
 
     Ok(r)
 }
@@ -52,15 +52,15 @@ pub(crate) enum Confirm {
 }
 
 pub(crate) fn confirm_advanced(customized_install: bool) -> Result<Confirm> {
-    writeln!(process().stdout().lock())?;
+    writeln!(Process::get().stdout().lock())?;
     let first_option = match customized_install {
         true => "1) Proceed with selected options (default - just press enter)",
         false => "1) Proceed with standard installation (default - just press enter)",
     };
-    writeln!(process().stdout().lock(), "{first_option}")?;
-    writeln!(process().stdout().lock(), "2) Customize installation")?;
-    writeln!(process().stdout().lock(), "3) Cancel installation")?;
-    write!(process().stdout().lock(), ">")?;
+    writeln!(Process::get().stdout().lock(), "{first_option}")?;
+    writeln!(Process::get().stdout().lock(), "2) Customize installation")?;
+    writeln!(Process::get().stdout().lock(), "3) Cancel installation")?;
+    write!(Process::get().stdout().lock(), ">")?;
 
     let _ = std::io::stdout().flush();
     let input = read_line()?;
@@ -71,17 +71,17 @@ pub(crate) fn confirm_advanced(customized_install: bool) -> Result<Confirm> {
         _ => Confirm::No,
     };
 
-    writeln!(process().stdout().lock())?;
+    writeln!(Process::get().stdout().lock())?;
 
     Ok(r)
 }
 
 pub(crate) fn question_str(question: &str, default: &str) -> Result<String> {
-    writeln!(process().stdout().lock(), "{question} [{default}]")?;
+    writeln!(Process::get().stdout().lock(), "{question} [{default}]")?;
     let _ = std::io::stdout().flush();
     let input = read_line()?;
 
-    writeln!(process().stdout().lock())?;
+    writeln!(Process::get().stdout().lock())?;
 
     if input.is_empty() {
         Ok(default.to_string())
@@ -92,12 +92,12 @@ pub(crate) fn question_str(question: &str, default: &str) -> Result<String> {
 
 pub(crate) fn question_bool(question: &str, default: bool) -> Result<bool> {
     let default_text = if default { "(Y/n)" } else { "(y/N)" };
-    writeln!(process().stdout().lock(), "{question} {default_text}")?;
+    writeln!(Process::get().stdout().lock(), "{question} {default_text}")?;
 
     let _ = std::io::stdout().flush();
     let input = read_line()?;
 
-    writeln!(process().stdout().lock())?;
+    writeln!(Process::get().stdout().lock())?;
 
     if input.is_empty() {
         Ok(default)
@@ -111,7 +111,7 @@ pub(crate) fn question_bool(question: &str, default: bool) -> Result<bool> {
 }
 
 pub(crate) fn read_line() -> Result<String> {
-    let stdin = process().stdin();
+    let stdin = Process::get().stdin();
     let stdin = stdin.lock();
     let mut lines = stdin.lines();
     let lines = lines.next().transpose()?;
@@ -250,7 +250,7 @@ fn show_channel_updates(
         Ok((pkg, banner, width, color, version, previous_version))
     });
 
-    let mut t = process().stdout().terminal();
+    let mut t = Process::get().stdout().terminal();
 
     let data: Vec<_> = data.collect::<Result<_>>()?;
     let max_width = data
@@ -291,7 +291,7 @@ pub(crate) fn update_all_channels(
 
     let show_channel_updates = || {
         if !toolchains.is_empty() {
-            writeln!(process().stdout().lock())?;
+            writeln!(Process::get().stdout().lock())?;
 
             let t = toolchains
                 .into_iter()
@@ -371,7 +371,7 @@ where
 }
 
 pub(crate) fn list_targets(distributable: DistributableToolchain<'_>) -> Result<utils::ExitCode> {
-    let mut t = process().stdout().terminal();
+    let mut t = Process::get().stdout().terminal();
     let manifestation = distributable.get_manifestation()?;
     let config = manifestation.read_config()?.unwrap_or_default();
     let manifest = distributable.get_manifest()?;
@@ -399,7 +399,7 @@ pub(crate) fn list_targets(distributable: DistributableToolchain<'_>) -> Result<
 pub(crate) fn list_installed_targets(
     distributable: DistributableToolchain<'_>,
 ) -> Result<utils::ExitCode> {
-    let t = process().stdout();
+    let t = Process::get().stdout();
     let manifestation = distributable.get_manifestation()?;
     let config = manifestation.read_config()?.unwrap_or_default();
     let manifest = distributable.get_manifest()?;
@@ -422,7 +422,7 @@ pub(crate) fn list_installed_targets(
 pub(crate) fn list_components(
     distributable: DistributableToolchain<'_>,
 ) -> Result<utils::ExitCode> {
-    let mut t = process().stdout().terminal();
+    let mut t = Process::get().stdout().terminal();
 
     let manifestation = distributable.get_manifestation()?;
     let config = manifestation.read_config()?.unwrap_or_default();
@@ -443,7 +443,7 @@ pub(crate) fn list_components(
 }
 
 pub(crate) fn list_installed_components(distributable: DistributableToolchain<'_>) -> Result<()> {
-    let t = process().stdout();
+    let t = Process::get().stdout();
     for component in distributable.components()? {
         if component.installed {
             writeln!(t.lock(), "{}", component.name)?;
@@ -471,7 +471,7 @@ fn print_toolchain_path(
         String::new()
     };
     writeln!(
-        process().stdout().lock(),
+        Process::get().stdout().lock(),
         "{}{}{}{}",
         &toolchain,
         if_default,
@@ -489,7 +489,7 @@ pub(crate) fn list_toolchains(cfg: &Cfg, verbose: bool) -> Result<utils::ExitCod
         .map(Into::into)
         .collect::<Vec<_>>();
     if toolchains.is_empty() {
-        writeln!(process().stdout().lock(), "no installed toolchains")?;
+        writeln!(Process::get().stdout().lock(), "no installed toolchains")?;
     } else {
         let def_toolchain_name = cfg.get_default()?.map(|t| (&t).into());
         let cwd = utils::current_dir()?;
@@ -527,7 +527,7 @@ pub(crate) fn list_overrides(cfg: &Cfg) -> Result<utils::ExitCode> {
     let overrides = cfg.settings_file.with(|s| Ok(s.overrides.clone()))?;
 
     if overrides.is_empty() {
-        writeln!(process().stdout().lock(), "no overrides")?;
+        writeln!(Process::get().stdout().lock(), "no overrides")?;
     } else {
         let mut any_not_exist = false;
         for (k, v) in overrides {
@@ -536,7 +536,7 @@ pub(crate) fn list_overrides(cfg: &Cfg) -> Result<utils::ExitCode> {
                 any_not_exist = true;
             }
             writeln!(
-                process().stdout().lock(),
+                Process::get().stdout().lock(),
                 "{:<40}\t{:<20}",
                 utils::format_path_for_display(&k)
                     + if dir_exists { "" } else { " (not a directory)" },
@@ -544,7 +544,7 @@ pub(crate) fn list_overrides(cfg: &Cfg) -> Result<utils::ExitCode> {
             )?
         }
         if any_not_exist {
-            writeln!(process().stdout().lock())?;
+            writeln!(Process::get().stdout().lock())?;
             info!(
                 "you may remove overrides for non-existent directories with
 `rustup override unset --nonexistent`"
@@ -567,51 +567,51 @@ pub(crate) fn version() -> &'static str {
 pub(crate) fn dump_testament() -> Result<utils::ExitCode> {
     use git_testament::GitModification::*;
     writeln!(
-        process().stdout().lock(),
+        Process::get().stdout().lock(),
         "Rustup version renders as: {}",
         version()
     )?;
     writeln!(
-        process().stdout().lock(),
+        Process::get().stdout().lock(),
         "Current crate version: {}",
         env!("CARGO_PKG_VERSION")
     )?;
     if TESTAMENT.branch_name.is_some() {
         writeln!(
-            process().stdout().lock(),
+            Process::get().stdout().lock(),
             "Built from branch: {}",
             TESTAMENT.branch_name.unwrap()
         )?;
     } else {
-        writeln!(process().stdout().lock(), "Branch information missing")?;
+        writeln!(Process::get().stdout().lock(), "Branch information missing")?;
     }
     writeln!(
-        process().stdout().lock(),
+        Process::get().stdout().lock(),
         "Commit info: {}",
         TESTAMENT.commit
     )?;
     if TESTAMENT.modifications.is_empty() {
-        writeln!(process().stdout().lock(), "Working tree is clean")?;
+        writeln!(Process::get().stdout().lock(), "Working tree is clean")?;
     } else {
         for fmod in TESTAMENT.modifications {
             match fmod {
                 Added(f) => writeln!(
-                    process().stdout().lock(),
+                    Process::get().stdout().lock(),
                     "Added: {}",
                     String::from_utf8_lossy(f)
                 )?,
                 Removed(f) => writeln!(
-                    process().stdout().lock(),
+                    Process::get().stdout().lock(),
                     "Removed: {}",
                     String::from_utf8_lossy(f)
                 )?,
                 Modified(f) => writeln!(
-                    process().stdout().lock(),
+                    Process::get().stdout().lock(),
                     "Modified: {}",
                     String::from_utf8_lossy(f)
                 )?,
                 Untracked(f) => writeln!(
-                    process().stdout().lock(),
+                    Process::get().stdout().lock(),
                     "Untracked: {}",
                     String::from_utf8_lossy(f)
                 )?,
@@ -622,15 +622,15 @@ pub(crate) fn dump_testament() -> Result<utils::ExitCode> {
 }
 
 fn show_backtrace() -> bool {
-    if let Ok(true) = process().var("RUSTUP_NO_BACKTRACE").map(|s| s == "1") {
+    if let Ok(true) = Process::get().var("RUSTUP_NO_BACKTRACE").map(|s| s == "1") {
         return false;
     }
 
-    if let Ok(true) = process().var("RUST_BACKTRACE").map(|s| s == "1") {
+    if let Ok(true) = Process::get().var("RUST_BACKTRACE").map(|s| s == "1") {
         return true;
     }
 
-    for arg in process().args() {
+    for arg in Process::get().args() {
         if arg == "-v" || arg == "--verbose" {
             return true;
         }

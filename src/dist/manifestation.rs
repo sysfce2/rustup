@@ -21,7 +21,7 @@ use crate::dist::notifications::*;
 use crate::dist::prefix::InstallPrefix;
 use crate::dist::temp;
 use crate::errors::{OperationError, RustupError};
-use crate::process;
+use crate::process::Process;
 use crate::utils::utils;
 
 pub(crate) const DIST_MANIFEST: &str = "multirust-channel-manifest.toml";
@@ -153,7 +153,7 @@ impl Manifestation {
         let components = update.components_urls_and_hashes(new_manifest)?;
 
         const DEFAULT_MAX_RETRIES: usize = 3;
-        let max_retries: usize = process()
+        let max_retries: usize = Process::get()
             .var("RUSTUP_MAX_RETRIES")
             .ok()
             .and_then(|s| s.parse().ok())

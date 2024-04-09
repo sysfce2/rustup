@@ -22,7 +22,7 @@ use crate::{
         prefix::InstallPrefix,
     },
     errors::RustupError,
-    process,
+    process::Process,
     toolchain::names::ToolchainName,
     utils::utils,
 };
@@ -428,7 +428,7 @@ impl TargetTriple {
             host_triple.map(TargetTriple::new)
         }
 
-        if let Ok(triple) = process().var("RUSTUP_OVERRIDE_HOST_TRIPLE") {
+        if let Ok(triple) = Process::get().var("RUSTUP_OVERRIDE_HOST_TRIPLE") {
             Some(Self(triple))
         } else {
             inner()
@@ -570,7 +570,7 @@ impl FromStr for ToolchainDesc {
 
 impl ToolchainDesc {
     pub(crate) fn manifest_v1_url(&self, dist_root: &str) -> String {
-        let do_manifest_staging = process().var("RUSTUP_STAGED_MANIFEST").is_ok();
+        let do_manifest_staging = Process::get().var("RUSTUP_STAGED_MANIFEST").is_ok();
         match (self.date.as_ref(), do_manifest_staging) {
             (None, false) => format!("{}/channel-rust-{}", dist_root, self.channel),
             (Some(date), false) => format!("{}/{}/channel-rust-{}", dist_root, date, self.channel),
@@ -790,7 +790,7 @@ fn update_from_dist_(
         // We limit the backtracking to 21 days by default (half a release cycle).
         // The limit of 21 days is an arbitrary selection, so we let the user override it.
         const BACKTRACK_LIMIT_DEFAULT: i32 = 21;
-        let provided = process()
+        let provided = Process::get()
             .var("RUSTUP_BACKTRACK_LIMIT")
             .ok()
             .and_then(|v| v.parse().ok())

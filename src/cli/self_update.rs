@@ -67,7 +67,7 @@ use crate::{
     },
     dist::dist::{self, PartialToolchainDesc, Profile, TargetTriple, ToolchainDesc},
     install::UpdateStatus,
-    process,
+    process::Process,
     toolchain::{
         distributable::DistributableToolchain,
         names::{MaybeOfficialToolchainName, ResolvableToolchainName, ToolchainName},
@@ -362,7 +362,7 @@ pub(crate) fn install(
     quiet: bool,
     mut opts: InstallOpts<'_>,
 ) -> Result<utils::ExitCode> {
-    if !process()
+    if !Process::get()
         .var_os("RUSTUP_INIT_SKIP_EXISTENCE_CHECKS")
         .map_or(false, |s| s == "yes")
     {
@@ -371,7 +371,7 @@ pub(crate) fn install(
 
     do_pre_install_options_sanity_checks(&opts)?;
 
-    if !process()
+    if !Process::get()
         .var_os("RUSTUP_INIT_SKIP_EXISTENCE_CHECKS")
         .map_or(false, |s| s == "yes")
     {
@@ -381,7 +381,7 @@ pub(crate) fn install(
     #[cfg(unix)]
     do_anti_sudo_check(no_prompt)?;
 
-    let mut term = process().stdout().terminal();
+    let mut term = Process::get().stdout().terminal();
 
     #[cfg(windows)]
     if let Some(plan) = do_msvc_check(&opts) {
@@ -533,7 +533,7 @@ fn rustc_or_cargo_exists_in_path() -> Result<()> {
             .any(|c| c == Component::Normal(".cargo".as_ref()))
     }
 
-    if let Some(paths) = process().var_os("PATH") {
+    if let Some(paths) = Process::get().var_os("PATH") {
         let paths = env::split_paths(&paths).filter(ignore_paths);
 
         for path in paths {
@@ -550,7 +550,7 @@ fn rustc_or_cargo_exists_in_path() -> Result<()> {
 
 fn check_existence_of_rustc_or_cargo_in_path(no_prompt: bool) -> Result<()> {
     // Only the test runner should set this
-    let skip_check = process().var_os("RUSTUP_INIT_SKIP_PATH_CHECK");
+    let skip_check = Process::get().var_os("RUSTUP_INIT_SKIP_PATH_CHECK");
 
     // Skip this if the environment variable is set
     if skip_check == Some("yes".into()) {
@@ -700,12 +700,12 @@ fn current_install_opts(opts: &InstallOpts<'_>) -> String {
 // Interactive editing of the install options
 fn customize_install(mut opts: InstallOpts<'_>) -> Result<InstallOpts<'_>> {
     writeln!(
-        process().stdout().lock(),
+        Process::get().stdout().lock(),
         "I'm going to ask you the value of each of these installation options.\n\
          You may simply press the Enter key to leave unchanged."
     )?;
 
-    writeln!(process().stdout().lock())?;
+    writeln!(Process::get().stdout().lock())?;
 
     opts.default_host_triple = Some(common::question_str(
         "Default host triple?",
@@ -875,7 +875,7 @@ fn maybe_install_rust(
         };
 
         cfg.set_default(Some(&desc.into()))?;
-        writeln!(process().stdout().lock())?;
+        writeln!(Process::get().stdout().lock())?;
         common::show_channel_update(&cfg, PackageUpdate::Toolchain(desc.clone()), Ok(status))?;
     }
     Ok(())
@@ -927,7 +927,7 @@ fn _install_selection(
                     targets.join(", ")
                 );
             }
-            writeln!(process().stdout().lock())?;
+            writeln!(Process::get().stdout().lock())?;
             None
         } else if user_specified_something
             || (update_existing_toolchain && cfg.find_default()?.is_none())
@@ -954,7 +954,7 @@ fn _install_selection(
             }
         } else {
             info!("updating existing rustup installation - leaving toolchains alone");
-            writeln!(process().stdout().lock())?;
+            writeln!(Process::get().stdout().lock())?;
             None
         },
     )
@@ -974,9 +974,9 @@ pub(crate) fn uninstall(no_prompt: bool) -> Result<utils::ExitCode> {
     }
 
     if !no_prompt {
-        writeln!(process().stdout().lock())?;
+        writeln!(Process::get().stdout().lock())?;
         let msg = format!(pre_uninstall_msg!(), cargo_home = canonical_cargo_home()?);
-        md(&mut process().stdout().terminal(), msg);
+        md(&mut Process::get().stdout().terminal(), msg);
         if !common::confirm("\nContinue? (y/N)", false)? {
             info!("aborting uninstallation");
             return Ok(utils::ExitCode(0));
@@ -1177,7 +1177,7 @@ pub(crate) fn prepare_update() -> Result<Option<PathBuf>> {
     let triple = dist::TargetTriple::from_host().unwrap_or(triple);
 
     // Get update root.
-    let update_root = process()
+    let update_root = Process::get()
         .var("RUSTUP_UPDATE_ROOT")
         .unwrap_or_else(|_| String::from(UPDATE_ROOT));
 
@@ -1210,7 +1210,7 @@ pub(crate) fn prepare_update() -> Result<Option<PathBuf>> {
 }
 
 pub(crate) fn get_available_rustup_version() -> Result<String> {
-    let update_root = process()
+    let update_root = Process::get()
         .var("RUSTUP_UPDATE_ROOT")
         .unwrap_or_else(|_| String::from(UPDATE_ROOT));
     let tempdir = tempfile::Builder::new()
@@ -1250,7 +1250,7 @@ pub(crate) fn get_available_rustup_version() -> Result<String> {
 }
 
 pub(crate) fn check_rustup_update() -> Result<()> {
-    let mut t = process().stdout().terminal();
+    let mut t = Process::get().stdout().terminal();
     // Get current rustup version
     let current_version = env!("CARGO_PKG_VERSION");
 

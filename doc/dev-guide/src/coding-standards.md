@@ -1,4 +1,3 @@
-
 # Coding standards
 
 Generally we just follow good sensible Rust practices, clippy and so forth.
@@ -25,7 +24,7 @@ though that is helpful.
 The `rustup::currentprocess` module abstracts the global state that is
 `std::env::args`, `std::env::vars`, `std::io::std*`, `std::process::id`,
 `std::env::current_dir` and `std::process::exit` permitting threaded tests of
-the CLI logic; use `process()` rather than those APIs directly.
+the CLI logic; use `Process::get()` rather than those APIs directly.
 
 ## Clippy lints
 
@@ -58,7 +57,7 @@ task, but not currently run per-platform, which means there is no way to find
 out the status of clippy per platform without running it on that platform as a
 developer.
 
-### import rustup-macros::{integration,unit}_test into test modules
+### import rustup-macros::{integration,unit}\_test into test modules
 
 These test helpers add pre-and-post logic to tests to enable the use of tracing
 inside tests, which can be helpful for tracking down behaviours in larger tests.

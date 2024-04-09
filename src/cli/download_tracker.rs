@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use crate::dist::Notification as In;
-use crate::process::{process, terminalsource};
+use crate::process::{terminalsource, Process};
 use crate::utils::units::{Size, Unit, UnitMode};
 use crate::utils::Notification as Un;
 use crate::Notification;
@@ -58,7 +58,7 @@ impl DownloadTracker {
             downloaded_last_few_secs: VecDeque::with_capacity(DOWNLOAD_TRACK_COUNT),
             start_sec: None,
             last_sec: None,
-            term: process().stdout().terminal(),
+            term: Process::get().stdout().terminal(),
             displayed_charcount: None,
             units: vec![Unit::B],
             display_progress,
@@ -73,7 +73,7 @@ impl DownloadTracker {
                 true
             }
             Notification::Install(In::Utils(Un::DownloadDataReceived(data))) => {
-                if process().stdout().is_a_tty() {
+                if Process::get().stdout().is_a_tty() {
                     self.data_received(data.len());
                 }
                 true

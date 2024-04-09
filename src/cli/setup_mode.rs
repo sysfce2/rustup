@@ -7,7 +7,7 @@ use crate::{
         self_update::{self, InstallOpts},
     },
     dist::dist::Profile,
-    process,
+    process::Process,
     toolchain::names::MaybeOfficialToolchainName,
     utils::utils,
 };
@@ -16,7 +16,7 @@ use crate::{
 pub fn main() -> Result<utils::ExitCode> {
     use clap::error::ErrorKind;
 
-    let args: Vec<_> = process().args().collect();
+    let args: Vec<_> = Process::get().args().collect();
     let arg1 = args.get(1).map(|a| &**a);
 
     // Secret command used during self-update. Not for users.
@@ -106,10 +106,10 @@ pub fn main() -> Result<utils::ExitCode> {
                 .action(ArgAction::SetTrue),
         );
 
-    let matches = match cli.try_get_matches_from(process().args_os()) {
+    let matches = match cli.try_get_matches_from(Process::get().args_os()) {
         Ok(matches) => matches,
         Err(e) if [ErrorKind::DisplayHelp, ErrorKind::DisplayVersion].contains(&e.kind()) => {
-            write!(process().stdout().lock(), "{e}")?;
+            write!(Process::get().stdout().lock(), "{e}")?;
             return Ok(utils::ExitCode(0));
         }
         Err(e) => return Err(e.into()),

@@ -1,7 +1,7 @@
 use std::io::{self, BufRead, Cursor, Read, Result, Write};
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use crate::process::process;
+use crate::process::Process;
 
 use super::terminalsource::{ColorableTerminal, StreamSelector};
 
@@ -92,7 +92,7 @@ impl WriterLock for io::StdoutLock<'_> {}
 
 impl Writer for io::Stdout {
     fn is_a_tty(&self) -> bool {
-        match process() {
+        match Process::get() {
             crate::process::Process::Os(p) => p.stdout_is_a_tty,
             #[cfg(feature = "test")]
             crate::process::Process::Test(_) => unreachable!(),
@@ -112,7 +112,7 @@ impl WriterLock for io::StderrLock<'_> {}
 
 impl Writer for io::Stderr {
     fn is_a_tty(&self) -> bool {
-        match process() {
+        match Process::get() {
             crate::process::Process::Os(p) => p.stderr_is_a_tty,
             #[cfg(feature = "test")]
             crate::process::Process::Test(_) => unreachable!(),

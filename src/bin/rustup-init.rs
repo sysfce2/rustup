@@ -28,7 +28,7 @@ use rustup::cli::self_update;
 use rustup::cli::setup_mode;
 use rustup::env_var::RUST_RECURSION_COUNT_MAX;
 use rustup::is_proxyable_tools;
-use rustup::process::{process, with, Process};
+use rustup::process::{with, Process};
 use rustup::utils::utils;
 
 fn main() {
@@ -105,11 +105,11 @@ fn maybe_trace_rustup() -> Result<utils::ExitCode> {
 
 #[cfg_attr(feature = "otel", tracing::instrument)]
 fn run_rustup() -> Result<utils::ExitCode> {
-    if let Ok(dir) = process().var("RUSTUP_TRACE_DIR") {
+    if let Ok(dir) = Process::get().var("RUSTUP_TRACE_DIR") {
         open_trace_file!(dir)?;
     }
     let result = run_rustup_inner();
-    if process().var("RUSTUP_TRACE_DIR").is_ok() {
+    if Process::get().var("RUSTUP_TRACE_DIR").is_ok() {
         close_trace_file!();
     }
     result
@@ -126,7 +126,7 @@ fn run_rustup_inner() -> Result<utils::ExitCode> {
     utils::current_dir()?;
     utils::current_exe()?;
 
-    match process().name().as_deref() {
+    match Process::get().name().as_deref() {
         Some("rustup") => rustup_mode::main(),
         Some(n) if n.starts_with("rustup-setup") || n.starts_with("rustup-init") => {
             // NB: The above check is only for the prefix of the file
@@ -158,7 +158,7 @@ fn run_rustup_inner() -> Result<utils::ExitCode> {
 }
 
 fn do_recursion_guard() -> Result<()> {
-    let recursion_count = process()
+    let recursion_count = Process::get()
         .var("RUST_RECURSION_COUNT")
         .ok()
         .and_then(|s| s.parse().ok())

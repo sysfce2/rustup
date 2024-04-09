@@ -12,7 +12,7 @@ use url::Url;
 
 use crate::{
     dist::dist::{TargetTriple, ToolchainDesc},
-    process::process,
+    process::Process,
 };
 use crate::{
     dist::manifest::{Component, Manifest},
@@ -91,7 +91,7 @@ pub(crate) enum RustupError {
     PathToolchainNotInstalled(PathBasedToolchainName),
     #[error(
         "rustup could not choose a version of {} to run, because one wasn't specified explicitly, and no default is configured.\n{}",
-        process().name().unwrap_or_else(|| "Rust".into()),
+        Process::get().name().unwrap_or_else(|| "Rust".into()),
         "help: run 'rustup default stable' to download the latest stable release of Rust and set it as your default toolchain."
     )]
     ToolchainNotSelected,
