@@ -20,7 +20,6 @@ use rs_tracing::{
     close_trace_file, close_trace_file_internal, open_trace_file, trace_to_file_internal,
 };
 
-use rustup::cli::common;
 use rustup::cli::proxy_mode;
 use rustup::cli::rustup_mode;
 #[cfg(windows)]
@@ -30,6 +29,7 @@ use rustup::currentprocess::{process, varsource::VarSource, with, OSProcess};
 use rustup::env_var::RUST_RECURSION_COUNT_MAX;
 use rustup::is_proxyable_tools;
 use rustup::utils::utils;
+use rustup::{cli::common, currentprocess::filesource::StderrSource};
 
 fn main() {
     #[cfg(windows)]
@@ -61,13 +61,15 @@ fn maybe_trace_rustup() -> Result<utils::ExitCode> {
             trace::{self, Sampler},
             Resource,
         };
-        use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+        use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
+
+        let curr_process = process();
 
         // Background submission requires a runtime, and since we're probably
         // going to want async eventually, we just use tokio.
         let threaded_rt = tokio::runtime::Runtime::new()?;
 
-        let result = threaded_rt.block_on(async {
+        let result = threaded_rt.block_on(async move {
             global::set_text_map_propagator(TraceContextPropagator::new());
             let tracer = opentelemetry_otlp::new_pipeline()
                 .tracing()
@@ -87,7 +89,14 @@ fn maybe_trace_rustup() -> Result<utils::ExitCode> {
                 .install_batch(opentelemetry_sdk::runtime::Tokio)?;
             let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("INFO"));
             let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-            let subscriber = Registry::default().with(env_filter).with(telemetry);
+            let subscriber = Registry::default()
+                .with(
+                    fmt::layer()
+                        .with_ansi(curr_process.stderr().is_a_tty())
+                        .with_writer(move || curr_process.stderr()),
+                )
+                .with(env_filter)
+                .with(telemetry);
             tracing::subscriber::set_global_default(subscriber)?;
             let result = run_rustup();
             // We're tracing, so block until all spans are exported.
