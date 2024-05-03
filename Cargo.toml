@@ -32,11 +32,8 @@ no-self-update = []
 otel = [
     "dep:opentelemetry-otlp",
     "dep:tracing-opentelemetry",
-    "dep:tracing-subscriber",
     "dep:opentelemetry",
     "dep:opentelemetry_sdk",
-    "dep:tokio",
-    "dep:tracing",
 ]
 
 # Exports code dependent on private interfaces for the integration test suite
@@ -89,11 +86,11 @@ tempfile.workspace = true
 termcolor.workspace = true
 thiserror.workspace = true
 threadpool = "1"
-tokio = { workspace = true, optional = true }
+tokio = { workspace = true }
 toml = "0.8"
 tracing-opentelemetry = { workspace = true, optional = true }
-tracing-subscriber = { workspace = true, optional = true, features = ["env-filter"] }
-tracing = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+tracing = { workspace = true }
 url.workspace = true
 wait-timeout = "0.2"
 walkdir = { workspace = true, optional = true }
