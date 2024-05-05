@@ -1,75 +1,71 @@
-use std::fmt;
-use std::io::Write;
+use std::{fmt, io::Write};
 
-use crate::currentprocess::{
-    filesource::StderrSource, process, terminalsource, varsource::VarSource,
+use termcolor::{Color, ColorSpec, WriteColor};
+use tracing::{Event, Subscriber};
+use tracing_subscriber::fmt::{
+    format::{self, FormatEvent, FormatFields},
+    FmtContext,
 };
+use tracing_subscriber::registry::LookupSpan;
 
-macro_rules! warn {
-    ( $ ( $ arg : tt ) * ) => ( $crate::cli::log::warn_fmt ( format_args ! ( $ ( $ arg ) * ) ) )
-}
-macro_rules! err {
-    ( $ ( $ arg : tt ) * ) => ( $crate::cli::log::err_fmt ( format_args ! ( $ ( $ arg ) * ) ) )
-}
-macro_rules! info {
-    ( $ ( $ arg : tt ) * ) => ( $crate::cli::log::info_fmt ( format_args ! ( $ ( $ arg ) * ) ) )
+use crate::utils::notify::NotificationLevel;
+
+macro_rules! debug {
+    ( $ ( $ arg : tt ) * ) => ( tracing::trace ! ( $ ( $ arg ) * )  )
 }
 
 macro_rules! verbose {
-    ( $ ( $ arg : tt ) * ) => ( $crate::cli::log::verbose_fmt ( format_args ! ( $ ( $ arg ) * ) ) )
+    ( $ ( $ arg : tt ) * ) => ( tracing::debug ! ( $ ( $ arg ) * )  )
 }
 
-macro_rules! debug {
-    ( $ ( $ arg : tt ) * ) => ( $crate::cli::log::debug_fmt ( format_args ! ( $ ( $ arg ) * ) ) )
+macro_rules! info {
+    ( $ ( $ arg : tt ) * ) => ( tracing::info ! ( $ ( $ arg ) * )  )
 }
 
-pub(crate) fn warn_fmt(args: fmt::Arguments<'_>) {
-    let mut t = process().stderr().terminal();
-    let _ = t.fg(terminalsource::Color::Yellow);
-    let _ = t.attr(terminalsource::Attr::Bold);
-    let _ = write!(t.lock(), "warning: ");
-    let _ = t.reset();
-    let _ = t.lock().write_fmt(args);
-    let _ = writeln!(t.lock());
+macro_rules! warn {
+    ( $ ( $ arg : tt ) * ) => ( tracing::warn ! ( $ ( $ arg ) * )  )
 }
 
-pub(crate) fn err_fmt(args: fmt::Arguments<'_>) {
-    let mut t = process().stderr().terminal();
-    let _ = t.fg(terminalsource::Color::Red);
-    let _ = t.attr(terminalsource::Attr::Bold);
-    let _ = write!(t.lock(), "error: ");
-    let _ = t.reset();
-    let _ = t.lock().write_fmt(args);
-    let _ = writeln!(t.lock());
+macro_rules! err {
+    ( $ ( $ arg : tt ) * ) => ( tracing::error ! ( $ ( $ arg ) * )  )
 }
 
-pub(crate) fn info_fmt(args: fmt::Arguments<'_>) {
-    let mut t = process().stderr().terminal();
-    let _ = t.attr(terminalsource::Attr::Bold);
-    let _ = write!(t.lock(), "info: ");
-    let _ = t.reset();
-    let _ = t.lock().write_fmt(args);
-    let _ = writeln!(t.lock());
+// Adapted from
+// https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/trait.FormatEvent.html#examples
+pub struct EventFormatter;
+
+impl<S, N> FormatEvent<S, N> for EventFormatter
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+    N: for<'a> FormatFields<'a> + 'static,
+{
+    fn format_event(
+        &self,
+        ctx: &FmtContext<'_, S, N>,
+        mut writer: format::Writer<'_>,
+        event: &Event<'_>,
+    ) -> fmt::Result {
+        let level = NotificationLevel::from(*event.metadata().level());
+        {
+            let mut buf = termcolor::Buffer::ansi();
+            _ = buf.set_color(ColorSpec::new().set_bold(true).set_fg(level.fg_color()));
+            _ = write!(buf, "{level}: ");
+            _ = buf.reset();
+            writer.write_str(std::str::from_utf8(buf.as_slice()).unwrap())?;
+        }
+        ctx.field_format().format_fields(writer.by_ref(), event)?;
+        writeln!(writer)
+    }
 }
 
-pub(crate) fn verbose_fmt(args: fmt::Arguments<'_>) {
-    let mut t = process().stderr().terminal();
-    let _ = t.fg(terminalsource::Color::Magenta);
-    let _ = t.attr(terminalsource::Attr::Bold);
-    let _ = write!(t.lock(), "verbose: ");
-    let _ = t.reset();
-    let _ = t.lock().write_fmt(args);
-    let _ = writeln!(t.lock());
-}
-
-pub(crate) fn debug_fmt(args: fmt::Arguments<'_>) {
-    if process().var("RUSTUP_DEBUG").is_ok() {
-        let mut t = process().stderr().terminal();
-        let _ = t.fg(terminalsource::Color::Blue);
-        let _ = t.attr(terminalsource::Attr::Bold);
-        let _ = write!(t.lock(), "debug: ");
-        let _ = t.reset();
-        let _ = t.lock().write_fmt(args);
-        let _ = writeln!(t.lock());
+impl NotificationLevel {
+    fn fg_color(&self) -> Option<Color> {
+        match self {
+            NotificationLevel::Debug => Some(Color::Blue),
+            NotificationLevel::Verbose => Some(Color::Magenta),
+            NotificationLevel::Info => None,
+            NotificationLevel::Warn => Some(Color::Yellow),
+            NotificationLevel::Error => Some(Color::Red),
+        }
     }
 }

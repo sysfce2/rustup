@@ -101,9 +101,12 @@ fn maybe_trace_rustup() -> Result<utils::ExitCode> {
                     EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("INFO"));
                 logger.compact().with_filter(env_filter).boxed()
             } else {
-                let env_filter = EnvFilter::new("DEBUG");
-                // FIXME: Add "classical" formatting
-                logger.with_filter(env_filter).boxed()
+                // Receive log lines from Rustup only.
+                let env_filter = EnvFilter::new("rustup=DEBUG");
+                logger
+                    .event_format(rustup::cli::log::EventFormatter)
+                    .with_filter(env_filter)
+                    .boxed()
             }
         };
         let subscriber = {
