@@ -1,11 +1,15 @@
 use std::env;
 
-include!("src/dist/triple.rs");
+use platforms::Platform;
 
-fn from_build() -> Result<PartialTargetTriple, String> {
-    PartialTargetTriple::new(&triple).ok_or(triple)
+fn from_build() -> Result<String, String> {
     let triple =
         env::var("RUSTUP_OVERRIDE_BUILD_TRIPLE").unwrap_or_else(|_| env::var("TARGET").unwrap());
+    if Platform::ALL.iter().any(|p| p.target_triple == triple) {
+        Ok(triple)
+    } else {
+        Err(triple)
+    }
 }
 
 fn main() {
