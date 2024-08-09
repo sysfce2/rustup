@@ -933,47 +933,6 @@ async fn list_default_and_override_toolchain() {
 }
 
 #[tokio::test]
-async fn heal_damaged_toolchain() {
-    let mut cx = CliTestContext::new(Scenario::SimpleV2).await;
-    cx.config.expect_ok(&["rustup", "default", "nightly"]).await;
-    cx.config
-        .expect_not_stderr_ok(&["rustup", "which", "rustc"], "syncing channel updates")
-        .await;
-    let manifest_path = format!(
-        "toolchains/nightly-{}/lib/rustlib/multirust-channel-manifest.toml",
-        this_host_triple()
-    );
-
-    let mut rustc_path = cx.config.rustupdir.join(
-        [
-            "toolchains",
-            &format!("nightly-{}", this_host_triple()),
-            "bin",
-            "rustc",
-        ]
-        .iter()
-        .collect::<PathBuf>(),
-    );
-
-    if cfg!(windows) {
-        rustc_path.set_extension("exe");
-    }
-
-    fs::remove_file(cx.config.rustupdir.join(manifest_path)).unwrap();
-    cx.config
-        .expect_ok_ex(
-            &["rustup", "which", "rustc"],
-            &format!("{}\n", rustc_path.to_str().unwrap()),
-            for_host!("info: syncing channel updates for 'nightly-{0}'\n"),
-        )
-        .await;
-    cx.config.expect_ok(&["rustup", "default", "nightly"]).await;
-    cx.config
-        .expect_stderr_ok(&["rustup", "which", "rustc"], "syncing channel updates")
-        .await;
-}
-
-#[tokio::test]
 #[ignore = "FIXME: Windows shows UNC paths"]
 async fn show_toolchain_override() {
     let mut cx = CliTestContext::new(Scenario::SimpleV2).await;
@@ -2133,7 +2092,7 @@ async fn file_override_toml_format_install_both_toolchain_and_components() {
         cx.config.expect_ok(&["rustup", "default", "stable"]).await;
     }
 
-    let cx = cx.with_dist_dir(Scenario::ArchivesV2_2015_01_01);
+    let mut cx = cx.with_dist_dir(Scenario::ArchivesV2_2015_01_01);
     cx.config
         .expect_stdout_ok(&["rustc", "--version"], "hash-stable-1.1.0")
         .await;
@@ -2153,6 +2112,9 @@ components = [ "rust-src" ]
     )
     .unwrap();
 
+    cx.config
+        .expect_ok(&["rustup", "toolchain", "install"])
+        .await;
     cx.config
         .expect_stdout_ok(&["rustc", "--version"], "hash-nightly-1")
         .await;
@@ -2181,6 +2143,12 @@ components = [ "rust-src" ]
     .unwrap();
 
     cx.config
+        .expect_stderr_ok(
+            &["rustup", "toolchain", "install"],
+            "info: installing component 'rust-src'",
+        )
+        .await;
+    cx.config
         .expect_stdout_ok(&["rustup", "component", "list"], "rust-src (installed)")
         .await;
 }
@@ -2208,6 +2176,12 @@ targets = [ "arm-linux-androideabi" ]
     .unwrap();
 
     cx.config
+        .expect_stderr_ok(
+            &["rustup", "toolchain", "install"],
+            "info: installing component 'rust-std' for 'arm-linux-androideabi'",
+        )
+        .await;
+    cx.config
         .expect_stdout_ok(
             &["rustup", "component", "list"],
             "arm-linux-androideabi (installed)",
@@ -2233,7 +2207,7 @@ components = [ "rust-bongo" ]
 
     cx.config
         .expect_stderr_ok(
-            &["rustc", "--version"],
+            &["rustup", "toolchain", "install"],
             "warn: Force-skipping unavailable component 'rust-bongo",
         )
         .await;
@@ -2263,6 +2237,9 @@ channel = "nightly"
 "#,
     )
     .unwrap();
+    cx.config
+        .expect_ok(&["rustup", "toolchain", "install"])
+        .await;
     cx.config
         .expect_not_stdout_ok(
             &["rustup", "component", "list"],
@@ -2789,7 +2766,7 @@ async fn dont_warn_on_partial_build() {
 /// Checks that `rust-toolchain.toml` files are considered
 #[tokio::test]
 async fn rust_toolchain_toml() {
-    let cx = CliTestContext::new(Scenario::SimpleV2).await;
+    let mut cx = CliTestContext::new(Scenario::SimpleV2).await;
     cx.config
         .expect_err(
             &["rustc", "--version"],
@@ -2800,7 +2777,9 @@ async fn rust_toolchain_toml() {
     let cwd = cx.config.current_dir();
     let toolchain_file = cwd.join("rust-toolchain.toml");
     raw::write_file(&toolchain_file, "[toolchain]\nchannel = \"nightly\"").unwrap();
-
+    cx.config
+        .expect_ok(&["rustup", "toolchain", "install"])
+        .await;
     cx.config
         .expect_stdout_ok(&["rustc", "--version"], "hash-nightly-2")
         .await;
@@ -2831,7 +2810,7 @@ async fn warn_on_duplicate_rust_toolchain_file() {
 
     cx.config
         .expect_stderr_ok(
-            &["rustc", "--version"],
+            &["rustup", "toolchain", "install"],
             &format!(
                 "warn: both `{0}` and `{1}` exist. Using `{0}`",
                 toolchain_file_1.canonicalize().unwrap().display(),

@@ -498,20 +498,18 @@ impl<'a> Cfg<'a> {
             .transpose()?)
     }
 
-    pub(crate) async fn toolchain_from_partial(
+    pub(crate) fn toolchain_from_partial(
         &self,
         toolchain: Option<PartialToolchainDesc>,
     ) -> anyhow::Result<Toolchain<'_>> {
-        match toolchain {
+        let toolchain = match toolchain {
             Some(toolchain) => {
                 let desc = toolchain.resolve(&self.get_default_host_triple()?)?;
-                Ok(Toolchain::new(
-                    self,
-                    LocalToolchainName::Named(ToolchainName::Official(desc)),
-                )?)
+                Some(LocalToolchainName::Named(ToolchainName::Official(desc)))
             }
-            None => Ok(self.find_or_install_active_toolchain(false).await?.0),
-        }
+            None => None,
+        };
+        self.local_toolchain(toolchain)
     }
 
     pub(crate) fn find_active_toolchain(
@@ -709,31 +707,40 @@ impl<'a> Cfg<'a> {
         Ok(Some(Toolchain::new(self, name)?.rustc_version()))
     }
 
-    pub(crate) async fn resolve_toolchain(
+    pub(crate) fn resolve_toolchain(
         &self,
         name: Option<ResolvableToolchainName>,
     ) -> Result<Toolchain<'_>> {
-        Ok(match name {
+        let toolchain = match name {
             Some(name) => {
                 let desc = name.resolve(&self.get_default_host_triple()?)?;
-                Toolchain::new(self, desc.into())?
+                Some(desc.into())
             }
-            None => self.find_or_install_active_toolchain(false).await?.0,
-        })
+            None => None,
+        };
+        self.local_toolchain(toolchain)
     }
 
-    pub(crate) async fn local_toolchain(
+    pub(crate) fn resolve_local_toolchain(
         &self,
         name: Option<ResolvableLocalToolchainName>,
     ) -> Result<Toolchain<'_>> {
         let local = name
             .map(|name| name.resolve(&self.get_default_host_triple()?))
             .transpose()?;
+        self.local_toolchain(local)
+    }
 
-        Ok(match local {
-            Some(tc) => Toolchain::from_local(tc, false, self).await?,
-            None => self.find_or_install_active_toolchain(false).await?.0,
-        })
+    fn local_toolchain(&self, name: Option<LocalToolchainName>) -> Result<Toolchain<'_>> {
+        let toolchain = match name {
+            Some(tc) => tc,
+            None => {
+                self.find_active_toolchain()?
+                    .ok_or_else(|| no_toolchain_error(self.process))?
+                    .0
+            }
+        };
+        Ok(Toolchain::new(self, toolchain)?)
     }
 
     #[tracing::instrument(level = "trace", skip_all)]
